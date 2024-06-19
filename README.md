@@ -10,11 +10,11 @@ We run a two-stage joint model for post-vaccination COVID-19 antibody decay and 
  - **Cox_infection_model.R** \
    For each sample from Longitudinal_antiboy_model.R, this runs a Cox model for risk of COVID-19 infection, where the risk depends on the sample of antibody trajectories. Runs in parallel using the "snowfall"/"parallel" packages in R. We run on a SLURM server. Outputs an array of the MLEs and covariance matrices for the Cox model parameters for each sample of the antibody trajectories, as well as the model design matrix.
  - **Posterior_estimates.R** \
-   This pools the samples from the longitudinal antibody model and the Cox infection model to calculate estimates of posterior quantities of interest. Specific outputs are described in the section on this file below. Also runs in parallel using the "snowfall"/"parallel" packages in R, which we ran on a SLURM server.
+   This pools the samples from the longitudinal antibody model and the Cox infection model to calculate estimates of posterior quantities of interest. Also runs in parallel using the "snowfall"/"parallel" packages in R, which we ran on a SLURM server.
  - **Antibody_plots.R** \
-This file produces plots, numbers and tables for the paper, using the raw data and the output from Longitudinal_antibody_model.R, including the random intercept and slope. The plots, numbers and tables mainly relate to antibodies. The random intercept and slope array is large, hence the plots files were split in two (to avoid issues with memory). Locations of code for specific plots and tables are detailed in the section on this file below.
+This file produces plots, numbers and tables for the paper, using the raw data and the output from Longitudinal_antibody_model.R, including the random intercept and slope. The plots, numbers and tables mainly relate to antibodies. The random intercept and slope array is large, hence the plots files were split in two (to avoid issues with memory). Locations of code for specific plots and tables are detailed in the section below.
  - **VE_plots.R** \
-This file produces plots, numbers and tables for the paper, using the raw data and the output from Posterior_estimates.R and Cox_infection_model.R. The plots, numbers and tables mainly relate to vaccine efficacy, though some relate to antibody levels. Locations of code for specific plots and tables are detailed in the section on this file below.
+This file produces plots, numbers and tables for the paper, using the raw data and the output from Posterior_estimates.R and Cox_infection_model.R. The plots, numbers and tables mainly relate to vaccine efficacy, though some relate to antibody levels. Locations of code for specific plots and tables are detailed in the section below.
 ### Minor files
  - **functions.R** \
    Contains some user-written functions used in some of the code. Some functions are old and not used any more, only worth looking at if there is a specific function you want to understand.
@@ -35,7 +35,7 @@ Tables 1-3 and Supplementary Table 8 are not directly produced in the code, so o
 | Fig. 2  | VE_plots | Mean_VE_vs_antibody | 246 |
 | Fig. 3  | VE_plots | Mean_VE_vs_time | 364 |
 | Fig. 4  | Antibody_plots | Covariate_effects_PB28_halflife | 898 |
-| Fig. 5  | VE_plots | Covariate_effects_mean_VE_vs_time_ | 788 |
+| Fig. 5  | VE_plots | Covariate_effects_mean_VE_vs_time_ | 741 |
 
 
 ### Supplementary Information
@@ -61,6 +61,7 @@ Tables 1-3 and Supplementary Table 8 are not directly produced in the code, so o
 | Supp. Fig. 7  | VE_plots | Covariate_effects_hazard.png | 210 |
 | Supp. Fig. 8  | VE_plots | VE_at_antibody_quantiles_vs_time | 595 |
 | Supp. Fig. 9  | VE_plots | Antibody_quantiles_vs_time | 629 |
-| Supp. Fig. 10  | VE_plots | Covariate_effects_mean_VE_vs_time_ | 788 |
-| Supp. Fig. 11 | VE_plots | Omicron_mean_VE_vs_time | 857 |
+| Supp. Fig. 10 | VE_plots | Covariate_effects_mean_VE_vs_time_ | 741 |
+| Supp. Fig. 11 | VE_plots | Omicron_mean_VE_vs_time | 812 |
 | Supp. Fig. 12 | VE_plots | Individuals_random_0123_ | 490 |
+ 
