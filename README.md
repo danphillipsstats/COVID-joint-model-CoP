@@ -26,10 +26,10 @@ This file produces plots, numbers and tables for the paper, using the raw data a
  - The main data cleaning file is not provided in this repository, nor is the data itself.
 
 ## Locations of Tables and Figures
-The best way to find a Table/Figure is searching for the "Phrase in code" in the File. The "Phrase in code" gives a phrase written in the name of the file which will find the code used to make that file. We aim to keep the line in code correct but mistakes may be present - using "Phrase in code" is more likely to be reliable. For example, searching for the string "Antibody_vs_time_obs_pred_mean" in the file "Antibody_plots.R" will find the code for Figure 1. \
+The best way to find a Table/Figure is searching for the "Phrase in code" in the File. The "Phrase in code" gives a phrase written in the name of the file which will find the code used to make that file. The approximate line in code is also given, however using "Phrase in code" is more likely to be reliable. For example, searching for the string "Antibody_vs_time_obs_pred_mean" in the file "Antibody_plots.R" will find the code for Figure 1. \
 Tables 1-3 and Supplementary Table 8 are not directly produced in the code, so omitted. Supplementary Table 1 and Supplementary Figure 1 is produced in the data cleaning code, which is not provided.
 ### Main text
-| Figure | File  | Phrase in code | Line in code |
+| Figure | File  | Phrase in code | Approx. line in code |
 | ------------- | ------------- | ---- | ---- |
 | Fig. 1  | Antibody_plots  | Antibody_vs_time_obs_pred_mean | 371 |
 | Fig. 2  | VE_plots | Mean_VE_vs_antibody | 246 |
@@ -39,7 +39,7 @@ Tables 1-3 and Supplementary Table 8 are not directly produced in the code, so o
 
 
 ### Supplementary Information
-| Table | File  | Phrase in code | Line in code |
+| Table | File  | Phrase in code | Approx. line in code |
 | ------------- | ------------- | ---- | ---- |
 | Supp. Table 1  | Data cleaning | Not provided |  |
 | Supp. Table 2  | Antibody_plots  | Antibody_observations | 315 |
@@ -50,7 +50,7 @@ Tables 1-3 and Supplementary Table 8 are not directly produced in the code, so o
 | Supp. Table 7  | VE_plots | Antibody_at_VE.csv | 312 |
 | Supp. Table 8  | Not in code |  |  |
 
-| Figure | File  | Phrase in code | Line in code |
+| Figure | File  | Phrase in code | Approx. line in code |
 | ------------- | ------------- | ---- | ---- |
 | Supp. Fig. 1  | Data cleaning | Not provided |  |
 | Supp. Fig. 2  | Antibody_plots  | Observed_antibody_vs_time_incl_control&outliers | 184 |
