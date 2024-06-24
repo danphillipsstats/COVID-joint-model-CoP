@@ -41,7 +41,7 @@ if(SLURM){
     dir.create(paste0(plot_directory,"/VE_plots/",model_name))
   }
 } else{ # This file has code defining where the directories are saved. Not included in the GitHub
-  source(paste0(getwd(),"Read_directories_VE_plots.R"))
+  source(paste0(getwd(),"/Read_directories_VE_plots.R"))
 }
 
 #load packages

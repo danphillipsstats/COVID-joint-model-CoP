@@ -64,7 +64,7 @@ joint_correlates$vaccine_allocation <- as.numeric(joint_correlates$As_vaccinated
 surv_fix_columns <- c("sc_repeat_pid","As_vaccinated_arm_2","age_group","sc_age","cor2dose_hcw_status","cor2dose_non_white","cor2dose_bmi_geq_30","cor2dose_comorbidities","cor2dose_primeschedule","cor2dose_schedule","cor2dose_interval","sc_gender","geographic_big_region","geographic_region","site")
 if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infection
   times <- joint_correlates[,c(surv_fix_columns,"cor2dose_primary_ind","start_time","end_time")]
-} else if (event_outcome = "pos"){ # if event is any COVID-19 infection
+} else if (event_outcome == "pos"){ # if event is any COVID-19 infection
   times <- joint_correlates[,c(surv_fix_columns,"cor2dose_positive_ind","start_time","end_time")]
 }
 # Change end_time to be calendar time of ending the at-risk period, instead of time since the start of the at-risk period
@@ -73,14 +73,14 @@ times$end_time <- times$start_time+times$end_time
 # Create survival dataset
 if (event_outcome == "prim"){
   times$event <- as.numeric(times$cor2dose_primary_ind==1)
-} else if (event_outcome = "pos"){
+} else if (event_outcome == "pos"){
   times$event <- as.numeric(times$cor2dose_positive_ind==1)
 }
 times2 <- tmerge(times,times,id=sc_repeat_pid,endpt=event(end_time,event),tstart = start_time, tstop = end_time)
 # Create antibody data
 if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infection
   event_times <- times$end_time[which(times$cor2dose_primary_ind==1)]
-} else if (event_outcome = "pos"){ # if event is any COVID-19 infection
+} else if (event_outcome == "pos"){ # if event is any COVID-19 infection
   event_times <- times$end_time[which(times$cor2dose_positive_ind==1)]
 }
 event_times <- c(0,unique(event_times[order(event_times)]))
@@ -143,7 +143,7 @@ cox_model_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_
 joint_correlates_mat <- joint_correlates
 if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infection
   joint_correlates_mat$event <- joint_correlates_mat$cor2dose_primary_ind
-} else if (event_outcome = "pos"){ # if event is any COVID-19 infection
+} else if (event_outcome == "pos"){ # if event is any COVID-19 infection
   joint_correlates_mat$event <- joint_correlates_mat$cor2dose_positive_ind
 }
 joint_correlates_mat$antibody <- 0

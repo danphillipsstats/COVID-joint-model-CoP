@@ -31,7 +31,7 @@ if(SLURM){
     dir.create(paste0(plot_directory,"/Antibody_plots"))
   }
 } else{ # This file has code defining where the directories are saved. Not included in the GitHub.
-  source(paste0(getwd(),"Read_directories_antibody_plots.R"))
+  source(paste0(getwd(),"/Read_directories_antibody_plots.R"))
 }
 
 #load packages
