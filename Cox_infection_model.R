@@ -41,8 +41,8 @@ data_long <- long_out_rs[[2]]
 long_out_rs <- long_out_rs[[1]]
 dim(long_out_rs)
 # Find the population parameters
-a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_0[")]
-a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_1[")]
+a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_0[")]
+a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_1[")]
 rm(long_out_rs)
 # Undo the time shift by t_center + 7 (so that t0 is now PB14, 7 days before t0 PB21 in the survival data)
 # This means the hazard at time t will relate to the antibody level 7 days prior.

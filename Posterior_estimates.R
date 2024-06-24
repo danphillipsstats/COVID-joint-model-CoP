@@ -65,8 +65,8 @@ if (nsamples<totalsample){
   long_out_rs <- long_out_rs[sample_choices,,]
 }
 # Find the population parameters for intercept and slope
-a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_0[")]
-a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_1[")]
+a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_0[")]
+a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_1[")]
 n <- dim(a_0_array)[3]
 rm(long_out_rs)
 runtimes$a_array <- Sys.time();
