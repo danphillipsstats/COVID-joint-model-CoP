@@ -31,7 +31,8 @@ if(SLURM){
     dir.create(paste0(plot_directory,"/Antibody_plots"))
   }
 } else{ # This file has code defining where the directories are saved. Not included in the GitHub.
-  source(paste0(getwd(),"/Read_directories_antibody_plots.R"))
+  read_dir_directory <- getwd() # Replace with where Read_directories_VE_plots.R is saved
+  source(paste0(read_dir_directory,"/Read_directories_antibody_plots.R"))
 }
 
 #load packages
@@ -112,6 +113,7 @@ if(antibody_type=="S"){ # If using anti-spike IgG
 nantibody_LOD <- sum(long_correlates$log_antibody==log(LOD))
 nantibody_leq_LOD <- sum(long_correlates$log_antibody<=log(LOD))
 if(nantibody_LOD<nantibody_leq_LOD & nantibody_LOD>0){suppressWarnings(paste0("There are ",nantibody_LOD," antibody observations equal to the limit of detection. We will treat these as though they are not censored, but observed exactly."))}
+# Individuals who were below the limit of detection were given a value equal to the LOD, so these should be treated as censored
 if(nantibody_LOD==nantibody_leq_LOD & nantibody_LOD>0){warning(paste0("There are ",nantibody_LOD," antibody observations equal to the limit of detection. We will treat these as though they are not censored, but observed exactly."))}
 long_correlates$left_censored <- FALSE
 long_correlates$left_censored[which(long_correlates$antibody<LOD)] <- TRUE
