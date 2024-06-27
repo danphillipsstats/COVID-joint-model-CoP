@@ -54,8 +54,8 @@ long_out_rs <- long_out_rs[[1]]
 chainsamples <- dim(long_out_rs)[1]
 # Merge the chains into one matrix
 # Find the population parameters for intercept and slope
-a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_0[")]
-a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,2)=="a_1[")]
+a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_0[")]
+a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_1[")]
 # a_0_array gives the value at time 14 + t_0 days after the second dose.
 n <- dim(a_0_array)[3]
 nsamples <- dim(a_0_array)[1]
