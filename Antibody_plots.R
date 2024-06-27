@@ -11,7 +11,7 @@ print(t1)
 antibody_type <- c("S","neuts")[1]
 long_type <- c("7_day_incubator","0_day_incubator")[1]
 # The name of the longitudinal model
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_hcw_cumhaz_t0PB28_6e4"
+file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
 if(!(substring(file_name,1,5)=="neuts") == (antibody_type=="neuts")){warning("Your file_name and antibody_type do not match. You may be running a neuts analysis on S data or vice versa. Please double check.")}
 name <- paste0("Correlates_long_",file_name)
 
