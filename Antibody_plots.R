@@ -494,12 +494,12 @@ for (count in 1:length(inds_plot)){
   j <- inds_plot[count]
   log_A_mat_s <- outer(a_0_array[,,j],rep(1,nts)) + outer(a_1_array[,,j],ds_t0)
   log_A_mat_s_quants <- apply(log_A_mat_s,3,quantile,c(0.025,0.5,0.975))
-  plot(NA,xlim=c(0,max(atsb)),ylim=log_antibody_lims,xaxt="n",yaxt="n",xlab="",ylab="", main = paste0("Individual ",j))#,xlab=time_axis_lab, ylab = paste0("Predicted ",antibody_lab),
+  plot(NA,xlim=c(0,max(atsb)),ylim=log_antibody_lims,xaxt="n",yaxt="n",xlab="",ylab="", main = paste0("Individual ",LETTERS[count]))#,xlab=time_axis_lab, ylab = paste0("Predicted ",antibody_lab),
   abline(v = seq(0,210,15),col="grey95")
   abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
   abline(v = seq(0,210,30),col="grey90")
   abline(h = antibody_ax_mark_loc,col="grey90")
-  #main = paste0("Predicted ",antibody_name," levels over time","\n individual ",j))
+  #main = paste0("Predicted ",antibody_name," levels over time","\n individual ",LETTERS[count]))
   lines(log_A_mat_s_quants[2,]~atsb,lty=1,lwd=1.7)
   lines(log_A_mat_s_quants[1,]~atsb,lty=2,lwd=1.7)
   lines(log_A_mat_s_quants[3,]~atsb,lty=2,lwd=1.7)
