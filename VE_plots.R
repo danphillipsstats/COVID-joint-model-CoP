@@ -279,7 +279,7 @@ dev.off()
 VE_vs_antibodies <- cbind(out$symptomatic$VE_summary,out$allpositive$VE_summary)
 colnames(VE_vs_antibodies)[1:4] <- paste("symptomatic","posterior",c("mean","median","0.025_quantile","0.975_quantile"),sep="_")
 colnames(VE_vs_antibodies)[5:8] <- paste("anyinfection","posterior",c("mean","median","0.025_quantile","0.975_quantile"),sep="_")
-write.csv(cbind(BAU_antibodies,VE_vs_antibodies),paste0(directory_correlates,"/4_Output/Plot_data/VE_vs_antibodies.csv"),row.names = F)
+write.csv(cbind(BAU_antibodies,VE_vs_antibodies),paste0(directory_correlates,"/4_Output/Plot_data/Fig2_VE_vs_antibodies.csv"),row.names = F)
 
 # Values
 for (i in 1:n.outcomes){
@@ -478,6 +478,14 @@ lines(pred.pos$haz ~ tt, col = outcome_cols[which(names(outcome_cols)=="allposit
 lines(pred.prim$haz ~ tt, col = outcome_cols[which(names(outcome_cols)=="symptomatic")],lwd=3)
 dev.off()
 
+# Create table of the baseline hazard over time
+baseline_hazard <- cbind(tt,pred.prim$haz,pred.prim$haz.inf,pred.prim$haz.sup,
+                         pred.pos$haz,pred.pos$haz.inf,pred.pos$haz.sup)
+colnames(baseline_hazard)[1] <- paste("Days_since_first_participant_at_risk_on_18_July_2020")
+colnames(baseline_hazard)[2:4] <- paste("primary_symptomatic",c("estimate","2.5_confidence_band","97.5_confidence_band"),sep="_")
+colnames(baseline_hazard)[5:7] <- paste("any_infection",c("estimate","2.5_confidence_band","97.5_confidence_band"),sep="_")
+write.csv(baseline_hazard,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig3_Baseline_hazard.csv"),row.names = F)
+
 # Supplementary Figure 5
 # Plot histogram of timings of antibody measurements over time since second dose
 png(paste0(plot_directory,"/VE_plots/",model_name,"/","Antibody_time_hist.png"), width = 1400, height=1000, pointsize = 23)
@@ -493,6 +501,12 @@ plot(antibody_time_hist,add=TRUE, col = blue_for_histogram)
 axis(1,at=long_time_axis_marks)
 dev.off()
 
+# Create table of antibody time histogram
+nbreak <- length(antibody_time_hist$breaks)
+antibody_time_hist_tab <- cbind(antibody_time_hist$breaks[1:(nbreak-1)],antibody_time_hist$breaks[2:nbreak],antibody_time_hist$counts)
+colnames(antibody_time_hist_tab) <- c("Lower_break_days_since_second_dose","Upper_break_days_since_second_dose","Number_of_antibody_measurements")
+write.csv(antibody_time_hist_tab,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig5_Antibody_time_hist.csv"),row.names = F)
+
 # Plot histogram of number of people at risk over time since second dose
 times <- seq(0,max(long_time_axis_marks))
 # Calculates the number at risk at time "time" when people exit study at "end_times"
@@ -507,6 +521,7 @@ n_at_risk_fun <- function(time,end_times,start_times=NULL){
 }
 n_at_risk <- sapply(times,n_at_risk_fun, end_times = joint_correlates[,c("end_time")]+raw_data_t0)
 n_at_risk_ChAd <- sapply(times,n_at_risk_fun, end_times = joint_correlates_ChAd[,c("end_time")]+raw_data_t0)
+n_at_risk_Control <- sapply(times,n_at_risk_fun, end_times = joint_correlates_Control[,c("end_time")]+raw_data_t0)
 # Supplementary Figure 4
 png(paste0(plot_directory,"/VE_plots/",model_name,"/","Numbers_at_risk_over_time.png"), width = 1400, height=1000, pointsize = 23)
 par(mar=c(5.1,4.1,2.1,1.1))
@@ -526,6 +541,11 @@ axis(1,at=long_time_axis_marks, xaxs="i")
 legend(x=270,y=4000,legend = c("Control", "ChAdOx1 nCoV-19"),
        col = c(green_for_histogram,blue_for_histogram), lwd=15)
 dev.off()
+
+# Create table of numbers at risk
+n_at_risk_tab <- cbind(times,n_at_risk_ChAd,n_at_risk_Control,n_at_risk)
+colnames(n_at_risk_tab) <- c("Days_since_second_dose","Number_at_risk_ChAdOx1","Number_at_risk_Control","Number_at_risk_Total")
+write.csv(antibody_time_hist_tab,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig4_Numbers_at_risk_over_time.csv"),row.names = F)
 
 # Supplementary Figure 6
 # Plot histogram of timings of cases over time since second dose
@@ -553,12 +573,18 @@ plot(cases_primary_hist,add=TRUE, col = alpha(outcome_cols[which(names(outcome_c
 axis(1,at=long_time_axis_marks)
 dev.off()
 
+# Create table of cases over time histogram
+nbreak <- length(cases_primary_hist$breaks)
+cases_over_time_hist_tab <- cbind(cases_primary_hist$breaks[1:(nbreak-1)],cases_primary_hist$breaks[2:nbreak],cases_primary_hist$counts,cases_positive_hist$counts)
+colnames(cases_over_time_hist_tab) <- c("Lower_break_days_since_second_dose","Upper_break_days_since_second_dose","Number_of_primary_symptomatic_cases","Number_of_total_COVID-19_cases")
+write.csv(cases_over_time_hist_tab,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig6_Cases_hist.csv"),row.names = F)
+
 # Create csv of VE_vs_time plot
 {VE_vs_time <- cbind(out$symptomatic$VE_vs_time[,"mean_VE",],out$allpositive$VE_vs_time[,"mean_VE",])
 colnames(VE_vs_time)[1:4] <- paste("symptomatic","posterior",c("mean","median","0.025_quantile","0.975_quantile"),sep="_")
 colnames(VE_vs_time)[5:8] <- paste("anyinfection","posterior",c("mean","median","0.025_quantile","0.975_quantile"),sep="_")
 VE_vs_time <- cbind(VEtsb,VE_vs_time); colnames(VE_vs_time)[1] <- "Days since second dose"
-write.csv(VE_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/VE_vs_time.csv"), row.names = F)}
+write.csv(VE_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/Fig3_VE_vs_time.csv"), row.names = F)}
 
 # Print mean VE at times
 times <- as.character(c(28,90,182)+7)
@@ -698,7 +724,7 @@ VE_quantiles_vs_time <- rbind(VE_quantiles_vs_time,c(""),
                               c("Outcome",rep(c("Symptomatic COVID-19","Any COVID-19 infection"),each=nquants_VEant_vs_time*4)),
                               c("Quantile of vaccine efficacy in study population",rep(rep(dimnames(out$symptomatic$VE_vs_time)[[2]][-1],each=4),2)),
                               c("Posterior summary",rep(c("mean","median","0.025_quantile","0.975_quantile"),nquants_VEant_vs_time*2)))
-write.table(VE_quantiles_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/VE_quantiles_vs_time.csv"), row.names = F,sep=",")
+write.table(VE_quantiles_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig8_VE_quantiles_vs_time.csv"), row.names = F,sep=",")
 
 # Create csv of Antibody_vs_time quantiles plot
 antibody_vs_time_quantiles <- out$symptomatic$antibody_quantiles[,dimnames(out$symptomatic$antibody_quantiles)[[2]]!="mean_VE",]
@@ -711,7 +737,7 @@ quant_names <- gsub("antibody_quantiles_","",quant_names)
 antibody_vs_time_quantiles_mat <- rbind(antibody_vs_time_quantiles_mat,c(""),
                                         c("Quantile of antibody level in study population",rep(quant_names,each=4)),
                               c("Posterior summary",rep(c("mean","median","0.025_quantile","0.975_quantile"),nquants_VEant_vs_time)))
-write.table(antibody_vs_time_quantiles_mat,paste0(directory_correlates,"/4_Output/Plot_data/antibody_quantiles_vs_time.csv"), row.names = F,sep=",")
+write.table(antibody_vs_time_quantiles_mat,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig9_antibody_quantiles_vs_time.csv"), row.names = F,sep=",")
 
 # Covariate effects on VE
 rowlabels_list <- list(c("baseline","56-69",">=70"), c("baseline","Male"),
@@ -832,7 +858,7 @@ VE_new_inds_vs_time <- rbind(VE_new_inds_vs_time,c(""),
                              c("Outcome",rep(c("Symptomatic COVID-19","Any COVID-19 infection"),each=n_new_inds_VE_vs_time*4)),
                               c("Covariate for new individual",rep(rep(new_ind_names,each=4),2)),
                               c("Posterior summary",rep(c("mean","median","0.025_quantile","0.975_quantile"),n_new_inds_VE_vs_time*2)))
-write.table(VE_new_inds_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/VE_covariate_effects_vs_time.csv"), row.names = F,sep=",")
+write.table(VE_new_inds_vs_time,paste0(directory_correlates,"/4_Output/Plot_data/Fig5_SuppFig10_VE_covariate_effects_vs_time.csv"), row.names = F,sep=",")
 
 
 quant_cols_omicron <- colorRampPalette(brewer.pal(5,"Spectral"))(nquants_want)
@@ -902,7 +928,7 @@ scenario_names2 <- c("estimate","upper 95% confidence bound","lower 95% confiden
 VE_vs_time_omicron_tab <- rbind(VE_vs_time_omicron_tab,c(""),
                              c("Assumed VE vs antibody curve from Wei et al. (2023)",rep(scenario_names2,each=4)),
                              c("Posterior summary",rep(c("mean","median","0.025_quantile","0.975_quantile"),n_scenarios_VE_vs_time)))
-write.table(VE_vs_time_omicron_tab,paste0(directory_correlates,"/4_Output/Plot_data/VE_vs_time_omicron.csv"), row.names = F,sep=",")
+write.table(VE_vs_time_omicron_tab,paste0(directory_correlates,"/4_Output/Plot_data/SuppFig11_VE_vs_time_omicron.csv"), row.names = F,sep=",")
 
 ################################################
 # Discussion
