@@ -326,16 +326,16 @@ colnames(outliers_table) <- c("Case","Days since second dose","Visit","Anti-spik
 write.csv(outliers_table,paste0(directory_correlates,"/4_Output/Tables/Antibody_outliers.csv"),row.names=F)
 
 ############
-# # Plot observed antibody over time
-# long_correlates$visit_col <- long_correlates$visit2
-# visit_cols <- c("black","blue3","red3")
-# levels(long_correlates$visit_col) <- visit_cols
-# long_correlates$visit_col <- as.character(long_correlates$visit_col)
-# 
-# png(paste0(plot_directory,"/Antibody_plots/Observed_antibody_vs_time.png"),width=784,height=560)
-# plot(NA, cex = 0.1,
-#      main = paste0("Observed ",antibody_name," levels over time"), ylim=log_antibody_lims, yaxt="n", xlab=time_axis_lab,
-#      xlim=c(0,max(atsb)),col="NA", ylab = paste0("Observed ",antibody_lab),xaxt="n")
+# Plot observed antibody over time
+long_correlates$visit_col <- long_correlates$visit2
+visit_cols <- c("black","blue3","red3")
+levels(long_correlates$visit_col) <- visit_cols
+long_correlates$visit_col <- as.character(long_correlates$visit_col)
+
+# png(paste0(plot_directory,"/Antibody_plots/Observed_antibody_vs_time.png"),width=1400,height=1000,pointsize=23)
+# par(mar=c(5.1,5.1,0.5,2.1))
+# plot(NA, cex = 0.2,ylim=c(min(antibody_ax_mark_loc_subgrid),log(10000/conv_factor)), yaxt="n", xlab=time_axis_lab,
+#      xlim=c(0,max(atsb)),col="NA", ylab = paste0("Observed ",antibody_lab),xaxt="n", cex.lab=1.3)
 # abline(v = seq(0,210,15),col="grey95")
 # abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
 # abline(v = seq(0,210,30),col="grey90")
@@ -343,15 +343,11 @@ write.csv(outliers_table,paste0(directory_correlates,"/4_Output/Tables/Antibody_
 # for(ii in long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),]$ll){
 #   lines(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$ll==ii),], lwd=0.2,col="grey")
 # }
-# points(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.1, col = as.character(long_correlates$visit_col),pch=1)
+# points(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.2, col = as.character(long_correlates$visit_col),pch=19)
 # axis(1,time_axis_marks)
 # axis(2,antibody_ax_mark_loc,antibody_ax_mark)
 # abline(h=log(LOD),lty=2)
-# # Hmisc::putKeyEmpty(x=long_correlates$antibody_time_since_boost,
-# #             y=long_correlates$log_antibody,
-# #             type="l",lty=0,labels=levels(long_correlates$visit2),col=visit_cols,pch=19, empty.method="area",
-# #             xlim=c(0,max(atsb)),ylim=log_antibody_lims)
-# legend(x=15,y=log(LOD)-0.1,col=visit_cols,legend=levels(long_correlates$visit2),pch=19)
+# legend(x=150,y=log(10000/conv_factor)-0.5,col=visit_cols,legend=levels(long_correlates$visit2),pch=19)
 # dev.off()
 
 # # Plot predicted antibody over time
@@ -371,35 +367,35 @@ write.csv(outliers_table,paste0(directory_correlates,"/4_Output/Tables/Antibody_
 
 # Plot predicted and observed antibody over time next to each other
 
-# png(paste0(plot_directory,"/Antibody_plots/Antibody_vs_time_obs_pred_mean.png"),width = 1800,height=1000, pointsize = 24)
-# par(mfrow=c(1,2))
-# plot(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.1,
-#      main = paste0("(a) Observed ",antibody_name," levels over time"), ylim=log_antibody_lims, yaxt="n", xlab=time_axis_lab,
-#      xlim=c(0,max(atsb)),col="NA", ylab = paste0("Observed ",antibody_lab),xaxt="n")
-# abline(v = seq(0,210,15),col="grey95")
-# abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
-# abline(v = seq(0,210,30),col="grey90")
-# abline(h = antibody_ax_mark_loc,col="grey90")
-# for(ii in long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),]$ll){
-#   lines(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$ll==ii),], lwd=0.2,col="grey")
-# }
-# points(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.2, col = as.character(long_correlates$visit_col),pch=19)
-# axis(1,time_axis_marks)
-# axis(2,antibody_ax_mark_loc,antibody_ax_mark)
-# abline(h=log(LOD),lty=2)
-# legend(x=15,y=log(LOD)+2.5,col=visit_cols,legend=levels(long_correlates$visit2),pch=19)
-# plot(NA,xlim=c(0,max(atsb)),ylim=log_antibody_lims,xlab=time_axis_lab, ylab = paste0("Predicted ",antibody_lab),
-#      main = paste0("(b) Predicted ",antibody_name," levels over time"),xaxt="n",yaxt="n")
-# abline(v = seq(0,210,15),col="grey95")
-# abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
-# abline(v = seq(0,210,30),col="grey90")
-# abline(h = antibody_ax_mark_loc,col="grey90")
-# for (i in 1:n){
-#   lines(log_A_mat[i,]~ atsb,col=c("grey"),lwd=0.2,lty=1)
-# }
-# axis(1,time_axis_marks)
-# axis(2,antibody_ax_mark_loc,antibody_ax_mark)
-# dev.off()
+png(paste0(plot_directory,"/Antibody_plots/Antibody_vs_time_obs_pred_mean.png"),width = 1800,height=1000, pointsize = 24)
+par(mfrow=c(1,2))
+plot(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.1,
+     main = paste0("(a) Observed ",antibody_name," levels over time"), ylim=log_antibody_lims, yaxt="n", xlab=time_axis_lab,
+     xlim=c(0,max(atsb)),col="NA", ylab = paste0("Observed ",antibody_lab),xaxt="n")
+abline(v = seq(0,210,15),col="grey95")
+abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
+abline(v = seq(0,210,30),col="grey90")
+abline(h = antibody_ax_mark_loc,col="grey90")
+for(ii in long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),]$ll){
+  lines(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$ll==ii),], lwd=0.2,col="grey")
+}
+points(log_antibody~antibody_time_since_boost,data = long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),], cex = 0.2, col = as.character(long_correlates$visit_col),pch=19)
+axis(1,time_axis_marks)
+axis(2,antibody_ax_mark_loc,antibody_ax_mark)
+abline(h=log(LOD),lty=2)
+legend(x=15,y=log(LOD)+2.5,col=visit_cols,legend=levels(long_correlates$visit2),pch=19)
+plot(NA,xlim=c(0,max(atsb)),ylim=log_antibody_lims,xlab=time_axis_lab, ylab = paste0("Predicted ",antibody_lab),
+     main = paste0("(b) Predicted ",antibody_name," levels over time"),xaxt="n",yaxt="n")
+abline(v = seq(0,210,15),col="grey95")
+abline(h = antibody_ax_mark_loc_subgrid,col="grey95")
+abline(v = seq(0,210,30),col="grey90")
+abline(h = antibody_ax_mark_loc,col="grey90")
+for (i in 1:n){
+  lines(log_A_mat[i,]~ atsb,col=c("grey"),lwd=0.2,lty=1)
+}
+axis(1,time_axis_marks)
+axis(2,antibody_ax_mark_loc,antibody_ax_mark)
+dev.off()
 
 # Set characters to be factor variables
 long_correlates[sapply(long_correlates, is.character)] <- lapply(long_correlates[sapply(long_correlates, is.character)], 

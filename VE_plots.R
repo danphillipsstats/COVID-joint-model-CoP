@@ -769,6 +769,38 @@ for (k in 1:n.outcomes){
   mtext("Estimated vaccine efficacy (%)",side=2,line=2,outer=TRUE,cex=1.3,las=0)
   dev.off()
 }
+# Figure for SAM presentation - age and interval only
+# cov_cols <- palette("Okabe-Ito")
+# k <- 1 # Only for symptomatic
+# png(paste0(plot_directory,"/VE_plots/",model_name,"/","Age_interval_effects_mean_VE_vs_time_",outcome_type[k],".png"),width = 1800,height=1000,
+#     pointsize = 23)
+# par(mfrow=c(1,2), mar = c(2.5,2.5,2.5,0.1),oma=c(4.1,4.1,0.1,1))
+# count <- 0
+# for (i in c(1,7)){
+#   count <- count + 1
+#   plot(NA,type="l",ylim=c(0,100),
+#        main = variable_names[i],
+#        ylab= "Vaccine efficacy (%)", xlab= time_axis_lab,col=NA,yaxt="n",xlim=c(0,max(VEtsb)), xaxt="n")
+#   abline(v = seq(0,210,15),col="grey95")
+#   abline(h = seq(-60,100,10),col="grey95")
+#   abline(v = seq(0,210,30),col="grey90")
+#   abline(h = seq(-60,100,20),col="grey90")
+#   for (j in 1:length(rownames_list[[i]])){
+#     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"2.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
+#     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"50%"]~VEtsb,lty=1, col = cov_cols[j], lwd=2)
+#     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"97.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
+#   }
+#   axis(1,time_axis_marks)
+#   legend(x=0,y=30,legend = rownames_list[[i]], col = cov_cols, lty=1, lwd=2)
+#   if ((((count-1)%%grid_size==0))){
+#     axis(2,at=VE_axis_marks, lab = paste0(VE_axis_marks,"%"), las=1)
+#     axis(2,at=VE_axis_ticks,labels=F)
+#   } else{axis(2,at=VE_axis_ticks,labels=F)}
+#   abline(h=0,lty=2, lwd=1.5)
+# }
+# mtext(time_axis_lab,side=1,outer=TRUE,cex=1.3,line=2)
+# mtext("Estimated vaccine efficacy (%)",side=2,line=2,outer=TRUE,cex=1.3,las=0)
+# dev.off()
 
 # Print VE quantiles at times
 print("Antibody quantiles")
