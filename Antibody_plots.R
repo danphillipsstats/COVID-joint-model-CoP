@@ -11,7 +11,7 @@ print(t1)
 antibody_type <- c("S","neuts")[1]
 long_type <- c("7_day_incubator","0_day_incubator")[1]
 # The name of the longitudinal model
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
+file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
 if(!(substring(file_name,1,5)=="neuts") == (antibody_type=="neuts")){warning("Your file_name and antibody_type do not match. You may be running a neuts analysis on S data or vice versa. Please double check.")}
 name <- paste0("Correlates_long_",file_name)
 
@@ -528,12 +528,23 @@ long_correlates[which(is.element(long_correlates$sc_repeat_pid,joint_correlates_
 a_0_pred <- a_0_array[,,as.character(long_correlates$sc_repeat_pid[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1")])]
 a_1_pred <- a_1_array[,,as.character(long_correlates$sc_repeat_pid[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1")])]
 
+# Get estimate of residual error
+long_out <- readRDS(paste0(output_directory,"/Correlates_long_",file_name,"_noreffects.RDS"))
+# File is a list, first entry is the Stan output, second entry the inputted data.
+data_long <- long_out[[2]]
+long_out <- long_out[[1]]
+sigma_pred <- long_out[,,"sigma_e"]
+
 obs_times <- long_correlates$antibody_time - data_long$t_center
 pred_all <- a_0_pred + sweep(a_1_pred,3,obs_times,FUN="*")
-pred_means <- apply(pred_all,3,median)
-pred_sd <- apply(pred_all,3,FUN=sd)
+resid_all <- sweep(-sweep(pred_all,3,long_correlates$log_antibody,FUN="-"),c(1,2),sigma_pred,FUN="/")
+resid_post_pred_old <- apply(resid_all,3,median) # I think we don't want to divide by pred_sd
+resid_post_pred <- apply(long_out[,,which(substring(dimnames(long_out)[3]$parameters,1,5)=="resid2")],3,mean) # I think we don't want to divide by pred_sd
 obs_atsb <- long_correlates$antibody_time_since_boost
-resid_post_pred <- (long_correlates$log_antibody-pred_means) # I think we don't want to divide by pred_sd
+pred_means <- apply(pred_all,3,median)
+sigma_mean <- mean(sigma_pred)
+resid_post_pred_separate <- (long_correlates$log_antibody-pred_means)/sigma_mean # I think we don't want to divide by pred_sd
+# resid_post_pred <- resid_post_pred_separate
 resid_df <- data.frame("atsb" = obs_atsb,
                        "residuals" = resid_post_pred,
                        "ll" = long_correlates$ll)
@@ -541,26 +552,37 @@ long_correlates$log_antibody[which(long_correlates$left_censored)] <- log(LOD)
 png(paste0(plot_directory,"/Antibody_plots/Longitudinal_residuals.png"),width=1400,height=1000,pointsize = 23)
 par(mar=c(5.1,4.1,0.5,0.5))
 plot(NA, ylim = max(abs(resid_post_pred))*c(-1,1),
-     ylab = paste0("Difference between predicted and observed log ",antibody_name),
-     xlab = time_axis_lab,xaxt="n",xlim=c(0,max(atsb)))
+     ylab = paste0("Subject-specific residuals for anti-spike IgG"),
+     xlab = time_axis_lab,xaxt="n",xlim=c(0,max(atsb)),yaxt="n")
 abline(v = seq(0,210,15),col="grey95")
-abline(h = seq(-2,2,0.25),col="grey95")
+abline(h = seq(-10,10,0.5),col="grey95")
 abline(v = seq(0,210,30),col="grey90")
-abline(h = seq(-2,2,0.5),col="grey90")
+abline(h = seq(-10,10,1),col="grey90")
 for(ii in resid_df$ll){
   lines(residuals~atsb,data = resid_df[which(resid_df$ll==ii),], lwd=0.5, col = alpha("grey",0.4))
 }
-points(resid_post_pred[which(!long_correlates$left_censored)]~obs_atsb[which(!long_correlates$left_censored)])
-points(resid_post_pred[which(long_correlates$left_censored)]~obs_atsb[which(long_correlates$left_censored)], col="blue")
+points(resid_post_pred~obs_atsb)
 abline(h=0,lty=2)
 axis(1,time_axis_marks)
-if (sum(long_correlates$left_censored)>0){
-  Hmisc::putKeyEmpty(y=resid_post_pred,x=obs_atsb,type="p",pch=1,lty=0,labels=c("Observed exactly","Left-censored"),col=c("black","blue"))
-} # Include legend if left-censored observations are present.
+axis(2,seq(-10,10,2))
+# if (sum(long_correlates$left_censored)>0){
+#   Hmisc::putKeyEmpty(y=resid_post_pred,x=obs_atsb,type="p",pch=1,lty=0,labels=c("Observed exactly","Left-censored"),col=c("black","blue"))
+# } # Include legend if left-censored observations are present.
 dev.off()
 visit <- c("PB28","PB90","PB182")[1]
 x <- resid_post_pred[which(long_correlates$visit2==visit)]
 left_censored <- long_correlates$left_censored[which(long_correlates$visit2==visit)]
+
+qqnorm(resid_df$residuals[which(resid_df$atsb<60)])
+qqline(resid_df$residuals[which(resid_df$atsb<60)])
+qqnorm(resid_df$residuals[which(resid_df$atsb>60 & resid_df$atsb<150)])
+qqline(resid_df$residuals[which(resid_df$atsb>60 & resid_df$atsb<150)])
+qqnorm(resid_df$residuals[which(resid_df$atsb>150)])
+qqline(resid_df$residuals[which(resid_df$atsb>150)])
+
+qqplot(resid_df$residuals[which(resid_df$atsb<60)],qt(ppoints(length(which(resid_df$atsb<60))),df=4))
+qqplot(resid_df$residuals[which(resid_df$atsb>60 & resid_df$atsb<150)],qt(ppoints(sum(resid_df$atsb>60 & resid_df$atsb<150)),df=4))
+qqplot(resid_df$residuals[which(resid_df$atsb>150)],qt(ppoints(sum(resid_df$atsb>150)),df=4))
 
 if (sum(left_censored)>0){
   require(EnvStats)
