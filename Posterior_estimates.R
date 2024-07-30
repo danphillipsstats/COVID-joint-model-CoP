@@ -16,7 +16,7 @@ event_outcome <- c("pos","prim")[2] # To be run with both infection outcomes sep
 antibody_type <- c("S","neuts")[1]
 long_type <- c("7_day_incubator","0_day_incubator")[1]
 # The name of the longitudinal model
-long_file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
+long_file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
 # The name for this file
 model_name <- "_submission"
 if(!(substring(long_file_name,1,5)=="neuts") == (antibody_type=="neuts")){warning("Your long_file_name and antibody_type do not match. You may be running a neuts analysis on S data or vice versa. Please double check.")}

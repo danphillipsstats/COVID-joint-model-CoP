@@ -539,7 +539,7 @@ obs_times <- long_correlates$antibody_time - data_long$t_center
 pred_all <- a_0_pred + sweep(a_1_pred,3,obs_times,FUN="*")
 resid_all <- sweep(-sweep(pred_all,3,long_correlates$log_antibody,FUN="-"),c(1,2),sigma_pred,FUN="/")
 resid_post_pred_old <- apply(resid_all,3,median) # I think we don't want to divide by pred_sd
-resid_post_pred <- apply(long_out[,,which(substring(dimnames(long_out)[3]$parameters,1,5)=="resid2")],3,mean) # I think we don't want to divide by pred_sd
+resid_post_pred <- apply(long_out[,,which(substring(dimnames(long_out)[3]$parameters,1,5)=="resid")],3,mean) # I think we don't want to divide by pred_sd
 obs_atsb <- long_correlates$antibody_time_since_boost
 pred_means <- apply(pred_all,3,median)
 sigma_mean <- mean(sigma_pred)
@@ -932,6 +932,8 @@ beta_PB28_half_life <- rbind(c("Multiplicative effect on anti-spike IgG level 28
                              c("Multiplicative effect on anti-spike IgG level half-life",0,0,0,0),
                              beta_halflife[,c("rownames","median","mean","lower", "upper")])
 beta_PB28_half_life[,"rownames"] <- as.character(beta_PB28_half_life[,"rownames"])
+beta_PB28_half_life_betas <- beta_PB28_half_life
+# beta_PB28_half_life_betas[1:15,2:4] <- 
 beta_PB28_half_life[,c("median","mean","lower", "upper")] <- round(as.numeric(as.matrix(beta_PB28_half_life[,c("median","mean","lower", "upper")])),2)
 
 beta_PB28_half_life[c(1,ncov+2),c("median","mean","lower", "upper")] <- rep(c("Median","Mean","0.025 quantile","0.975 quantile"),each=2)

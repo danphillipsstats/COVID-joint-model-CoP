@@ -98,7 +98,6 @@ generated quantities {
 	real<lower=0> 		tau_1;			// covariate effects on slope
 	real<lower=-1,upper=1>  rho;			// Correlation between random intercept and random slopes
 	vector[n_l]     resid;        // Subject-specific longitudinal residuals
-	vector[n_l]     resid2;        // Subject-specific longitudinal residuals
 	
 	// Random intercept and slope
 	a_0 = log_y_sd * a_0_tf + log_y_mean; 
@@ -113,5 +112,4 @@ generated quantities {
 	rho = rho_tf;
 	sigma_e = log_y_sd * sigma_e_tf;
 	resid = (log_y_tf-log_mu_tf)/sigma_e_tf;
-	resid2 = (log_y - (a_0[ll] + t_l .* a_1[ll]))/sigma_e;
 }
