@@ -32,7 +32,7 @@ event_outcome <- c("pos","prim")[2] # To be run with both infection outcomes sep
 # Get the intercepts and slopes
 set.seed(1)
 # Name of file from Longitudinal_antibody_model.R
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
+file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
 # Read the output from Longitudinal_antibody_model.R
 long_out_rs <- readRDS(paste0(output_directory,"/Correlates_long_",file_name,"_reffects.RDS"))
 # The list of objects put into the stan model
