@@ -55,13 +55,15 @@ parameters {
 transformed parameters {
 	vector[n] 		a_0_tf;		// predicted longitudinal outcome value at t=0
 	vector[n] 		a_1_tf;		// predicted longitudinal slope
+	vector[n_l] 		log_mu_tf;			// Mean for data point
 	
 	a_0_tf = X_l_tf*beta_l0_tf + alpha_0_tf + tau_0_tf*eta_0_tf;
 	a_1_tf = -exp(X_l_tf*beta_l1_tf + alpha_1_tf + tau_1_tf*(rho_tf*eta_0_tf + sqrt(1-rho_tf^2)*eta_1_tf)); // Using Cholesky decomposition
+	
+	log_mu_tf = a_0_tf[ll] + t_l_tf .* a_1_tf[ll];
 }
 
 model {
-	vector[n_l] 		log_mu_tf;			// Mean for data point
 	
 	// Priors
 	tau_0_tf ~ student_t(2,0,1);
@@ -78,7 +80,6 @@ model {
 	rho_tf ~ uniform(-1,1);
 	
 	// Model
-	log_mu_tf = a_0_tf[ll] + t_l_tf .* a_1_tf[ll];
 	log_y_tf ~ student_t(4,log_mu_tf,sigma_e_tf);
 }
 
@@ -96,6 +97,8 @@ generated quantities {
 	real<lower=0> 		tau_0;			// covariate effects on intercept
 	real<lower=0> 		tau_1;			// covariate effects on slope
 	real<lower=-1,upper=1>  rho;			// Correlation between random intercept and random slopes
+	vector[n_l]     resid;        // Subject-specific longitudinal residuals
+	vector[n_l]     resid2;        // Subject-specific longitudinal residuals
 	
 	// Random intercept and slope
 	a_0 = log_y_sd * a_0_tf + log_y_mean; 
@@ -109,4 +112,6 @@ generated quantities {
 	tau_1 = tau_1_tf;
 	rho = rho_tf;
 	sigma_e = log_y_sd * sigma_e_tf;
+	resid = (log_y_tf-log_mu_tf)/sigma_e_tf;
+	resid2 = (log_y - (a_0[ll] + t_l .* a_1[ll]))/sigma_e;
 }

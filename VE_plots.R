@@ -1,3 +1,4 @@
+# Save this in new branch
 ##############
 # This file uses the output from the Cox model in Cox_infection_model.R
 # and the posterior estimates in Posterior_estimates.R
@@ -267,12 +268,14 @@ plot(pred_antibody_values_28_hist,add=TRUE,border=green_for_histogram,col=blue_f
 for (i in 1:n.outcomes){
   polygon(c(BAU_antibodies,rev(BAU_antibodies)), c(out[[i]]$VE_summary[,"upper95CI"], rev(out[[i]]$VE_summary[,"lower95CI"])),
           col = alpha(outcome_cols[i],0.3),lty=0)
-  lines(out[[i]]$VE_summary[,"median"]~BAU_antibodies, col = outcome_cols[i], lwd=2)
-  lines(out[[i]]$VE_summary[,"lower95CI"]~BAU_antibodies,lty=2, col = outcome_cols[i], lwd=1.5)
-  lines(out[[i]]$VE_summary[,"upper95CI"]~BAU_antibodies,lty=2, col = outcome_cols[i], lwd=1.5)
+  lines(out[[i]]$VE_summary[,"median"]~BAU_antibodies, col = outcome_cols[i], lwd=3)
+  lines(out[[i]]$VE_summary[,"lower95CI"]~BAU_antibodies,lty=2, col = outcome_cols[i], lwd=2)
+  lines(out[[i]]$VE_summary[,"upper95CI"]~BAU_antibodies,lty=2, col = outcome_cols[i], lwd=2)
 }
 abline(v=LOD*conv_factor,lty=2,lwd=2)
 abline(h=0,lty=2)
+# legend(x=700,y=80, legend = c("Symptomatic", "Any positive"),
+#        col = c("red","blue"), lwd=3)
 dev.off()
 
 # Create csv of VE_vs_antibodies plot
@@ -377,14 +380,16 @@ abline(h = seq(-60,100,20),col="grey90")
 for (i in 1:n.outcomes){
   polygon(c(VEtsb,rev(VEtsb)), c(out[[i]]$VE_vs_time[,"mean_VE","97.5%"], rev(out[[i]]$VE_vs_time[,"mean_VE","2.5%"])),
           col = alpha(outcome_cols[i],0.3),lty=0)
-  lines(out[[i]]$VE_vs_time[,"mean_VE","50%"]~VEtsb, col = outcome_cols[i], lwd=2)
-  lines(out[[i]]$VE_vs_time[,"mean_VE","2.5%"]~VEtsb,lty=2, col = outcome_cols[i], lwd=1.5)
-  lines(out[[i]]$VE_vs_time[,"mean_VE","97.5%"]~VEtsb,lty=2, col = outcome_cols[i], lwd=1.5)
+  lines(out[[i]]$VE_vs_time[,"mean_VE","50%"]~VEtsb, col = outcome_cols[i], lwd=3)
+  lines(out[[i]]$VE_vs_time[,"mean_VE","2.5%"]~VEtsb,lty=2, col = outcome_cols[i], lwd=2)
+  lines(out[[i]]$VE_vs_time[,"mean_VE","97.5%"]~VEtsb,lty=2, col = outcome_cols[i], lwd=2)
 }
 axis(2,at=VE_axis_marks, lab = paste0(VE_axis_marks,"%"), las=1)
 axis(2,at=VE_axis_ticks,labels=F)
 axis(1,at=time_axis_marks)
 abline(h=0,lty=2)
+# legend(x=150,y=95, legend = c("Symptomatic", "Any positive"),
+#        col = c("red","blue"), lwd=3)
 dev.off()
 
 # # And with histograms
@@ -780,11 +785,11 @@ for (k in 1:n.outcomes){
     abline(h = seq(-60,100,20),col="grey90")
     for (j in 1:length(rownames_list[[i]])){
       lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"2.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
-      lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"50%"]~VEtsb,lty=1, col = cov_cols[j], lwd=2)
+      lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"50%"]~VEtsb,lty=1, col = cov_cols[j], lwd=3)
       lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"97.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
     }
     axis(1,time_axis_marks)
-    legend(x=0,y=30,legend = rownames_list[[i]], col = cov_cols, lty=1, lwd=2)
+    legend(x=0,y=30,legend = rownames_list[[i]], col = cov_cols, lty=1, lwd=3)
     if ((((count-1)%%grid_size==0))){
       axis(2,at=VE_axis_marks, lab = paste0(VE_axis_marks,"%"), las=1)
       axis(2,at=VE_axis_ticks,labels=F)
@@ -813,11 +818,11 @@ for (k in 1:n.outcomes){
 #   abline(h = seq(-60,100,20),col="grey90")
 #   for (j in 1:length(rownames_list[[i]])){
 #     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"2.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
-#     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"50%"]~VEtsb,lty=1, col = cov_cols[j], lwd=2)
+#     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"50%"]~VEtsb,lty=1, col = cov_cols[j], lwd=3)
 #     lines(out[[k]]$VE_vs_time_new_ind[,rowlabels_list[[i]][[j]],"97.5%"]~VEtsb,lty=2, col = cov_cols[j], lwd=2)
 #   }
 #   axis(1,time_axis_marks)
-#   legend(x=0,y=30,legend = rownames_list[[i]], col = cov_cols, lty=1, lwd=2)
+#   legend(x=0,y=30,legend = rownames_list[[i]], col = cov_cols, lty=1, lwd=3)
 #   if ((((count-1)%%grid_size==0))){
 #     axis(2,at=VE_axis_marks, lab = paste0(VE_axis_marks,"%"), las=1)
 #     axis(2,at=VE_axis_ticks,labels=F)

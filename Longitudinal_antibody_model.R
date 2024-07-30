@@ -99,9 +99,9 @@ long_out = rstan::sampling(
   refresh = sampling_iterations/10, #show an update @ each %10
   seed = 1000,
   include = FALSE, # Exclude the following parameters from the model output
-  pars = c("a_0_tf","a_1_tf","eta_0_tf","eta_1_tf"))
+  pars = c("a_0_tf","a_1_tf","eta_0_tf","eta_1_tf","log_mu_tf"))
 
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
+file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
 name <- paste0("Correlates_long_",file_name)
 
 # Summaries of stan model output
