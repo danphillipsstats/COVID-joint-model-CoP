@@ -52,6 +52,15 @@ nsamples <- dim(a_0_array)[1]
 nchains <- dim(a_0_array)[2]
 print("Created a_0_array and a_1_array")
 
+thin <- seq(from=0,to=15000,length.out=26)[-1]
+a_0_array <- a_0_array[thin,,]
+a_1_array <- a_1_array[thin,,]
+dim(a_1_array)
+
+a_0_mat <- apply(a_0_array,3,c)
+a_1_mat <- apply(a_1_array,3,c)
+m <- nrow(a_0_mat)
+
 # Do the above when the new longitudinal model has been run.
 ###############
 # Read joint_correlates
