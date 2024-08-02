@@ -52,7 +52,7 @@ nsamples <- dim(a_0_array)[1]
 nchains <- dim(a_0_array)[2]
 print("Created a_0_array and a_1_array")
 
-thin <- seq(from=0,to=15000,length.out=26)[-1]
+thin <- seq(from=0,to=15000,length.out=6)[-1]-2999
 a_0_array <- a_0_array[thin,,]
 a_1_array <- a_1_array[thin,,]
 dim(a_1_array)
@@ -60,6 +60,7 @@ dim(a_1_array)
 a_0_mat <- apply(a_0_array,3,c)
 a_1_mat <- apply(a_1_array,3,c)
 m <- nrow(a_0_mat)
+inds_mat <- matrix(1:n,nrow=m,ncol=n,byrow=T)
 
 # Do the above when the new longitudinal model has been run.
 ###############
@@ -96,14 +97,14 @@ event_times <- c(0,unique(event_times[order(event_times)]))
 
 ##############################################################################
 # Create sample dataset
-a_0_sample <- a_0_array[1,1,]
-a_1_sample <- a_1_array[1,1,]
+a_0_sample <- c(a_0_mat) # Includes values for each individual from each imputed dataset stacked on top of each other
+a_1_sample <- c(a_1_mat) # So m values for individual 1, then m values for individual 2 etc.
 # Prepare wide antibody data
 antibody_data <- exp(a_0_sample%*%t(rep(1,length(event_times))) + a_1_sample%*%t(event_times))
 colnames(antibody_data) <- event_times
 antibody_data <- as.data.frame(antibody_data)
 surv_time_id_columns <- c("sc_repeat_pid","start_time","end_time")
-antibody_data[,surv_time_id_columns] <- joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),surv_time_id_columns]
+antibody_data[,surv_time_id_columns] <- joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),surv_time_id_columns][c(inds_mat),]
 # Change end_time to be calendar time of ending the at-risk period, instead of time since the start of the at-risk period
 antibody_data$end_time <- antibody_data$end_time + antibody_data$start_time
 # Transform antibody data from wide to long
@@ -120,101 +121,105 @@ names(surv_antibody_data)[names(surv_antibody_data)=="endpt"] <- "event"
 
 print("Created surv_antibody_data")
 
-################
-# Create an array of intercepts and slopes to be imputed for each iteration
-length(joint_correlates$sc_repeat_pid[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1")])
-length(joint_correlates$sc_repeat_pid)
-dimnames(a_0_array)$parameters <- joint_correlates$sc_repeat_pid[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1")]
-dimnames(a_1_array)$parameters <- joint_correlates$sc_repeat_pid[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1")]
-# Create a list of 4 sublists for each chain
-# In the sublists entry i corresponds to the ith draw from posterior for a_0, a_1
-# Each entry contains a matrix where row 1 is a_0 (intercept) for each individual and row 2 is a_1 (gradient)
-a_01_mat_list <- lapply(seq_len(nchains), function(chain) lapply(seq_len(nsamples),function(i) rbind(a_0_array[i,chain,],a_1_array[i,chain,])))
-print(object.size(a_01_mat_list),units="GB")
-rm(a_0_array,a_1_array)
-
-print("Created a_01_mat_list")
-
 # Set antibody levels to 0 for the control individuals
 surv_antibody_data$antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
 vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
 
-# Create initial templates of outputs to fill in during the loop
-a_0_sample_times <- a_01_mat_list[[1]][[1]][1,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])]
-a_1_sample_times <- a_01_mat_list[[1]][[1]][2,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])]
-surv_antibody_data$antibody[vacc_group_ind] <- exp(a_0_sample_times + surv_antibody_data$end_time[vacc_group_ind]*a_1_sample_times)
+#####
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
 # all of which may affect the risk of infection independently of vaccination (i.e. for both vaccinated and control individuals)
-cox_model_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
-#####
-# Create a model.matrix for use in later Output analysis
-joint_correlates_mat <- joint_correlates
-if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infection
-  joint_correlates_mat$event <- joint_correlates_mat$cor2dose_primary_ind
-} else if (event_outcome == "pos"){ # if event is any COVID-19 infection
-  joint_correlates_mat$event <- joint_correlates_mat$cor2dose_positive_ind
-}
-joint_correlates_mat$antibody <- 0
-joint_correlates_mat$antibody[which(joint_correlates_mat$As_vaccinated_arm_2=="ChAdOx1")] <- 1 # Just set to one for ease of understanding interaction terms
-joint_correlates_mat$end_time <- joint_correlates_mat$start_time + joint_correlates_mat$end_time # As end_time should be end time not length of time at risk
-cox_model_mat <- model.matrix(cox_model_formula,data=joint_correlates_mat)
-# Run a cox model, to create placeholders
+cox_model_direct_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_direct <- try(coxph(cox_model_direct_formula,
+                     data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
+
+# Cox-Snell residuals
+cox_snell_direct_ant <- surv_antibody_data$event - resid(cox_model)
+cox_snell_direct_ant_NA <- survfit(Surv(cox_snell_direct_ant,surv_antibody_data$event)~1)
+plot(cox_snell_direct_ant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for antibody model with direct effect")
+abline(0,1,col=2)
+
+# Model with no direct effect but antibody effect only
+cox_model_formula <- Surv(start_time,end_time,event)~antibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_model <- try(coxph(cox_model_formula,
-                     data=surv_antibody_data, id=sc_repeat_pid))
-npred <- length(c(cox_model$coefficients,cox_model$var))
-print("Created cox_model")
+                                data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 
-# Set up the cluster using snowfall package
-nwork <- length(parallelly::availableWorkers()) # number of parallel workers
+cox_model_interactions_formula <- Surv(start_time,end_time,event)~antibody + antibody:age_group+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_interactions <- try(coxph(cox_model_interactions_formula,
+                                    data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 
-# Check the object size in memory
-obj_size <- format(object.size(a_01_mat_list),units="GB",standard="SI")
-obj_size
-paste0("Object size if copied to all nodes:")
-paste0(as.numeric(substring(obj_size,first=1,last=gregexpr(pattern="G",obj_size)[[1]]-1))*nwork," GB")
+plot()
 
-t3 <- Sys.time()
-print("Starting apply...")
-# Function runs the Cox model using antibody data from matrix a_01_mat
-# Where row 1 of a_01_mat is a_0 (intercept) and row 2 is a_1 (gradient)
-# Columns are all individuals.
-# Returns a vector containing first the MLEs and then the asymptotic covariance matrix of Cox parameters
-cox_VE_antibody <- function(a_01_mat){
-  surv_antibody_data$antibody[vacc_group_ind] <- exp(a_01_mat[1,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])] + surv_antibody_data$start_time[vacc_group_ind]*a_01_mat[2,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])])
-  cox_model <- try(coxph(cox_model_formula,
-                       data=surv_antibody_data, id=sc_repeat_pid))
-  return(try(c(cox_model$coefficients,cox_model$var)))
-}
+# Cox-Snell residuals
+cox_snell_ant <- surv_antibody_data$event - resid(cox_model)
+cox_snell_ant_NA <- survfit(Surv(cox_snell_ant,surv_antibody_data$event)~1)
+plot(cox_snell_ant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for antibody model without direct effect")
+abline(0,1,col=2)
 
-sfSapply_a_01_mat_list <- function(chain, my_seed = 1234){
-  a_01_mat_sub_list <- a_01_mat_list[[chain]]
-  # Begin a cluster in snowfall package
-  cluster <- snowfall::sfInit(nwork,type="SOCK", parallel=T)   
-  # Load the relevant objects in the parallel workspaces
-  snowfall::sfExport("surv_antibody_data","vacc_group_ind","cox_model_formula")
-  # Load the survival library
-  snowfall::sfLibrary(survival)
-  # Set up the random number generation
-  snowfall::sfClusterSetupRNG(seed=my_seed)
-  
-  print(paste("Number of workers:",nwork))
-  # Runs the function on each element of the list in parallel
-  # That is, runs a cox model for each imputation of antibody levels.
-  cox_model_pred_var <- t(snowfall::sfSapply(x = a_01_mat_sub_list, fun = cox_VE_antibody))
-  snowfall::sfStop()
-  return(cox_model_pred_var)
-} # vapply ensures the outputted array is of the right dimensions
-cox_model_pred_var <- vapply(seq_len(nchains),sfSapply_a_01_mat_list,FUN.VALUE = array(0,c(nsamples,npred)))
+# Model using log antibodies
+surv_logantibody_data <- surv_antibody_data
+surv_logantibody_data$logantibody <- 0
+surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(surv_logantibody_data$antibody)[which(surv_logantibody_data$antibody!=0)]
 
-# Define the column names
-variance_names <- paste(rep(names(cox_model$coefficients), each = length(names(cox_model$coefficients))),names(cox_model$coefficients), sep = ".")
-dim(cox_model_pred_var)
-dimnames(cox_model_pred_var)[[2]] <- c(names(cox_model$coefficients),variance_names)
-# aperm reorders the dimensions in the array
-output <- list("cox_model_pred" = aperm(cox_model_pred_var[,names(cox_model$coefficients),],c(1,3,2)),
-               "cox_model_var" = aperm(cox_model_pred_var[,variance_names,],c(1,3,2)),
-               "cox_model_mat" = cox_model_mat)
+cox_model_formula_logant <- Surv(start_time,end_time,event)~logantibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_logantibody_model <- try(coxph(cox_model_formula_logant,
+                                   data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
+
+# Cox-Snell residuals for log antibody model
+cox_snell_logant <- surv_antibody_data$event - resid(cox_logantibody_model)
+cox_snell_logant_NA <- survfit(Surv(cox_snell_logant,surv_antibody_data$event)~1)
+plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for log antibody model")
+abline(0,1,col=2)
+BIC(cox_model,cox_model,cox_logantibody_model)
+
+
+# Martingale residuals for the effect of antibodies
+# Fit cox model to vaccine group only (as these are the individuals we have antibody observations for)
+cox_model_formula_noant <- Surv(start_time,end_time,event)~age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+#####
+# Run a cox model, to create placeholders
+surv_antibody_data_ChAdOx1 <- surv_antibody_data[which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1"),]
+cox_model_noant <- try(coxph(cox_model_formula_noant,
+                       data=surv_antibody_data_ChAdOx1, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data_ChAdOx1))))
+mart_resid_ant <- resid(cox_model_noant,type="martingale")
+# Plot all
+ord <- order(surv_antibody_data_ChAdOx1$antibody)
+mart_resid <- mart_resid_ant[ord]
+antibody_for_mart <- surv_antibody_data_ChAdOx1$antibody[ord]
+plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1)
+lines(lowess(mart_resid~antibody_for_mart),lwd=2,col=2)
+# restrict to antibodies <= 1e5
+ord <- order(surv_antibody_data_ChAdOx1$antibody)
+mart_resid <- mart_resid_ant[ord]
+antibody_for_mart <- surv_antibody_data_ChAdOx1$antibody[ord]
+ord2 <- which(antibody_for_mart<1e5)
+antibody_for_mart <- antibody_for_mart[ord2]
+mart_resid <- mart_resid[ord2]
+plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1)
+lowess.out <- lowess(mart_resid~antibody_for_mart)
+lines(lowess(mart_resid~antibody_for_mart),lwd=2,col=2)
+plot(mart_resid~log(antibody_for_mart), xlab = "Antibody", ylab = "Martingale residuals with antibody on log scale", cex=0.1)
+lowess.out <- lowess(mart_resid~log(antibody_for_mart))
+lines(lowess(mart_resid~log(antibody_for_mart)),lwd=2,col=2)
+
+# Schoenfeld residuals - antibody and direct effect model
+z <- cox.zph(cox_model)
+plot(z[1], main = "Schoenfeld residuals for antibody in antibody model")
+abline(h=0)
+plot(z[2], main = "Schoenfeld residuals for vaccination in antibody model")
+abline(h=0)
+# Schoenfeld residuals - antibody effect only model
+z <- cox.zph(cox_model)
+plot(z[1], main = "Schoenfeld residuals for antibody in antibody model")
+abline(h=0)
+# Schoenfeld residuals
+z_noant <- cox.zph(cox_logantibody_model)
+plot(z_noant[1], main = "Schoenfeld residuals for log antibody in log antibody model")
+abline(h=0)
+plot(z_noant[2], main = "Schoenfeld residuals for vaccination in log antibody model")
+abline(h=0)
+
+
 
 cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc")
 saveRDS(output,paste0(output_directory,"/Cox_infection_model_long_",file_name,"_",cox_model_name,".RDS"))
