@@ -137,7 +137,7 @@ surv_antibody_data$antibody[vacc_group_ind] <- exp(a_0_sample_times + surv_antib
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
 # all of which may affect the risk of infection independently of vaccination (i.e. for both vaccinated and control individuals)
-cox_model_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_formula <- Surv(start_time,end_time,event)~antibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 #####
 # Create a model.matrix for use in later Output analysis
 joint_correlates_mat <- joint_correlates
