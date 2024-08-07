@@ -207,7 +207,7 @@ output <- list("cox_model_pred" = aperm(cox_model_pred_var[,names(cox_model$coef
                "cox_model_var" = aperm(cox_model_pred_var[,variance_names,],c(1,3,2)),
                "cox_model_mat" = cox_model_mat)
 
-cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc")
+cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc_nodirect")
 saveRDS(output,paste0(output_directory,"/Cox_infection_model_long_",file_name,"_",cox_model_name,".RDS"))
 pryr::mem_used()
 t_final <- Sys.time()
