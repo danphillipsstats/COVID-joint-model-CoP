@@ -52,7 +52,7 @@ nsamples <- dim(a_0_array)[1]
 nchains <- dim(a_0_array)[2]
 print("Created a_0_array and a_1_array")
 
-thin <- seq(from=0,to=15000,length.out=6)[-1]-2999
+thin <- seq(from=0,to=15000,length.out=6)[-1]
 a_0_array <- a_0_array[thin,,]
 a_1_array <- a_1_array[thin,,]
 dim(a_1_array)
@@ -125,6 +125,9 @@ print("Created surv_antibody_data")
 surv_antibody_data$antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
 vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
 
+# Make the directory
+if (!dir.exists(paste0(plot_directory,"/VE_plots/residuals2"))){dir.create(paste0(plot_directory,"/VE_plots/residuals2"))}
+
 #####
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
@@ -134,10 +137,12 @@ cox_model_direct <- try(coxph(cox_model_direct_formula,
                      data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 
 # Cox-Snell residuals
-cox_snell_direct_ant <- surv_antibody_data$event - resid(cox_model)
+cox_snell_direct_ant <- surv_antibody_data$event - resid(cox_model_direct)
 cox_snell_direct_ant_NA <- survfit(Surv(cox_snell_direct_ant,surv_antibody_data$event)~1)
-plot(cox_snell_direct_ant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for antibody model with direct effect")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_antibody_direct.png"),width = 1400,height=1000, pointsize=23)
+plot(cox_snell_direct_ant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for antibody model with direct effect")
 abline(0,1,col=2)
+dev.off()
 
 # Model with no direct effect but antibody effect only
 cox_model_formula <- Surv(start_time,end_time,event)~antibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
@@ -148,13 +153,13 @@ cox_model_interactions_formula <- Surv(start_time,end_time,event)~antibody + ant
 cox_model_interactions <- try(coxph(cox_model_interactions_formula,
                                     data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 
-plot()
-
 # Cox-Snell residuals
 cox_snell_ant <- surv_antibody_data$event - resid(cox_model)
 cox_snell_ant_NA <- survfit(Surv(cox_snell_ant,surv_antibody_data$event)~1)
-plot(cox_snell_ant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for antibody model without direct effect")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_antibody_only.png"),width = 1400,height=1000, pointsize=23)
+plot(cox_snell_ant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for antibody model without direct effect")
 abline(0,1,col=2)
+dev.off()
 
 # Model using log antibodies
 surv_logantibody_data <- surv_antibody_data
@@ -168,9 +173,12 @@ cox_logantibody_model <- try(coxph(cox_model_formula_logant,
 # Cox-Snell residuals for log antibody model
 cox_snell_logant <- surv_antibody_data$event - resid(cox_logantibody_model)
 cox_snell_logant_NA <- survfit(Surv(cox_snell_logant,surv_antibody_data$event)~1)
-plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox--Snell residual plot for log antibody model")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_logantibody_direct.png"),width = 1400,height=1000, pointsize=23)
+plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for log antibody model")
 abline(0,1,col=2)
-BIC(cox_model,cox_model,cox_logantibody_model)
+dev.off()
+AIC(cox_model_direct,cox_model,cox_logantibody_model)
+BIC(cox_model_direct,cox_model,cox_logantibody_model)
 
 
 # Martingale residuals for the effect of antibodies
@@ -186,8 +194,10 @@ mart_resid_ant <- resid(cox_model_noant,type="martingale")
 ord <- order(surv_antibody_data_ChAdOx1$antibody)
 mart_resid <- mart_resid_ant[ord]
 antibody_for_mart <- surv_antibody_data_ChAdOx1$antibody[ord]
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Martingale_residuals.png"),width = 1400,height=1000, pointsize=23)
 plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1)
 lines(lowess(mart_resid~antibody_for_mart),lwd=2,col=2)
+dev.off()
 # restrict to antibodies <= 1e5
 ord <- order(surv_antibody_data_ChAdOx1$antibody)
 mart_resid <- mart_resid_ant[ord]
@@ -195,30 +205,43 @@ antibody_for_mart <- surv_antibody_data_ChAdOx1$antibody[ord]
 ord2 <- which(antibody_for_mart<1e5)
 antibody_for_mart <- antibody_for_mart[ord2]
 mart_resid <- mart_resid[ord2]
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Martingale_residuals_zoomed.png"),width = 1400,height=1000, pointsize=23)
 plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1)
 lowess.out <- lowess(mart_resid~antibody_for_mart)
 lines(lowess(mart_resid~antibody_for_mart),lwd=2,col=2)
+dev.off()
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Martingale_residuals_log.png"),width = 1400,height=1000, pointsize=23)
 plot(mart_resid~log(antibody_for_mart), xlab = "Antibody", ylab = "Martingale residuals with antibody on log scale", cex=0.1)
 lowess.out <- lowess(mart_resid~log(antibody_for_mart))
 lines(lowess(mart_resid~log(antibody_for_mart)),lwd=2,col=2)
+dev.off()
 
 # Schoenfeld residuals - antibody and direct effect model
-z <- cox.zph(cox_model)
-plot(z[1], main = "Schoenfeld residuals for antibody in antibody model")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Schoenfeld_residuals_antibody_direct_ant.png"),width = 1400,height=1000, pointsize=23)
+z <- cox.zph(cox_model_direct)
+plot(z[1], main = "Schoenfeld residuals for antibody in antibody with direct effect model")
 abline(h=0)
-plot(z[2], main = "Schoenfeld residuals for vaccination in antibody model")
+dev.off()
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Schoenfeld_residuals_antibody_direct_vacc.png"),width = 1400,height=1000, pointsize=23)
+plot(z[2], main = "Schoenfeld residuals for vaccination in antibody with direct effect model")
 abline(h=0)
+dev.off()
 # Schoenfeld residuals - antibody effect only model
-z <- cox.zph(cox_model)
-plot(z[1], main = "Schoenfeld residuals for antibody in antibody model")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Schoenfeld_residuals_antibody_only_ant.png"),width = 1400,height=1000, pointsize=23)
+z_noant <- cox.zph(cox_model)
+plot(z_noant[1], main = "Schoenfeld residuals for antibody in antibody without direct effect model")
 abline(h=0)
+dev.off()
 # Schoenfeld residuals
-z_noant <- cox.zph(cox_logantibody_model)
-plot(z_noant[1], main = "Schoenfeld residuals for log antibody in log antibody model")
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Schoenfeld_residuals_logantibody_direct_ant.png"),width = 1400,height=1000, pointsize=23)
+z_logant <- cox.zph(cox_logantibody_model)
+plot(z_logant[1], main = "Schoenfeld residuals for log antibody in log antibody model")
 abline(h=0)
-plot(z_noant[2], main = "Schoenfeld residuals for vaccination in log antibody model")
+dev.off()
+jpeg(paste0(plot_directory,"/VE_plots/residuals2/Schoenfeld_residuals_logantibody_direct_vacc.png"),width = 1400,height=1000, pointsize=23)
+plot(z_logant[2], main = "Schoenfeld residuals for vaccination in log antibody model")
 abline(h=0)
-
+dev.off()
 
 
 cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc")
