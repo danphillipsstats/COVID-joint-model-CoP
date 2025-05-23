@@ -74,7 +74,9 @@ for (i in 1:nrow(joint_correlates)){
                                                                      discrete_haz$time<=joint_correlates$end_cal_time[i] &
                                                                      discrete_haz$As_vaccinated_arm_2==joint_correlates$As_vaccinated_arm_2[i])])
 }
-# t_center = 7 means centered at day 28 post second dose as antibody_time=x means a reading at 21+x days post boost.
+# t_center = 7 means the output is centered at day 28 post second dose 
+# as in the data entering this function antibody_time=x means a reading at 21+x days post boost.
+# So a_0 is at antibody time d28 which will affect risk 7 days later.
 data_long <- stan_long_model(long_data = long_correlates_S[which(long_correlates_S$As_vaccinated_arm_2=="ChAdOx1"),c("sc_repeat_pid","log_S","antibody_time")],
                              log_y_var = "log_S", obs_time_var = "antibody_time",
                              individual_data = joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),],
