@@ -10,8 +10,8 @@ print(t_init)
 # Cox infection model
 ##############################################################################
 # Define the directories in which files are saved - these may need adjusting for other users.
-directory_correlates <- getwd() 
-directory_correlates_project <- paste0(directory_correlates,"/3_Programs")
+directory_correlates <- dirname(dirname(getwd()))
+directory_correlates_project <- paste0(directory_correlates,"/3_Programs/COVID-joint-model-CoP")
 output_directory <- paste0(directory_correlates,"/4_Output")
 
 #load packages
@@ -34,7 +34,7 @@ set.seed(1)
 # Name of file from Longitudinal_antibody_model.R
 file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28"
 # Read the output from Longitudinal_antibody_model.R
-long_out_rs <- readRDS(paste0(output_directory,"/Correlates_long_",file_name,"_reffects.RDS"))
+long_out_rs <- readRDS(paste0("/data/dragon110/shug5415/Documents/Research/Correlates_joint_modelling/4_Output/Correlates_long_",file_name,"_reffects.RDS"))
 # The list of objects put into the stan model
 data_long <- long_out_rs[[2]]
 # The random intercepts and slopes outputted from the stan model
@@ -161,13 +161,16 @@ plot(cox_snell_ant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plo
 abline(0,1,col=2)
 dev.off()
 
-# Model using log antibodies
+# Model using log(1 + antibodies)
 surv_logantibody_data <- surv_antibody_data
 surv_logantibody_data$logantibody <- 0
-surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(surv_logantibody_data$antibody)[which(surv_logantibody_data$antibody!=0)]
+surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(1+surv_logantibody_data$antibody)[which(surv_logantibody_data$antibody!=0)]
 
 cox_model_formula_logant <- Surv(start_time,end_time,event)~logantibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_logantibody_model <- try(coxph(cox_model_formula_logant,
+                                   data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
+cox_model_formula_logant_nodirect <- Surv(start_time,end_time,event)~logantibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_logantibody_model_nodirect <- try(coxph(cox_model_formula_logant_nodirect,
                                    data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
 
 # Cox-Snell residuals for log antibody model
@@ -177,8 +180,9 @@ jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_logantibody_direct.pn
 plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for log antibody model")
 abline(0,1,col=2)
 dev.off()
-AIC(cox_model_direct,cox_model,cox_logantibody_model)
-BIC(cox_model_direct,cox_model,cox_logantibody_model)
+AIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect)
+BIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect)
+# Both prefer antibody with no direct effect over log(1+A) with or without direct effect, or antibody with direct effect.
 
 
 # Martingale residuals for the effect of antibodies
@@ -195,7 +199,7 @@ ord <- order(surv_antibody_data_ChAdOx1$antibody)
 mart_resid <- mart_resid_ant[ord]
 antibody_for_mart <- surv_antibody_data_ChAdOx1$antibody[ord]
 jpeg(paste0(plot_directory,"/VE_plots/residuals2/Martingale_residuals.png"),width = 1400,height=1000, pointsize=23)
-plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1)
+plot(mart_resid~antibody_for_mart, xlab = "Antibody", ylab = "Martingale residuals", cex=0.1, log="x")
 lines(lowess(mart_resid~antibody_for_mart),lwd=2,col=2)
 dev.off()
 # restrict to antibodies <= 1e5
