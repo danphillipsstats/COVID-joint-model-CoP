@@ -13,6 +13,7 @@ print(t_init)
 directory_correlates <- dirname(dirname(getwd()))
 directory_correlates_project <- paste0(directory_correlates,"/3_Programs/COVID-joint-model-CoP")
 output_directory <- paste0(directory_correlates,"/4_Output")
+conv_factor <- 0.00645
 
 #load packages
 library(rstan)
@@ -126,7 +127,7 @@ surv_antibody_data$antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Contr
 vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
 
 # Make the directory
-if (!dir.exists(paste0(plot_directory,"/VE_plots/residuals2"))){dir.create(paste0(plot_directory,"/VE_plots/residuals2"))}
+# if (!dir.exists(paste0(plot_directory,"/VE_plots/residuals2"))){dir.create(paste0(plot_directory,"/VE_plots/residuals2"))}
 
 #####
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
@@ -164,7 +165,7 @@ dev.off()
 # Model using log(1 + antibodies)
 surv_logantibody_data <- surv_antibody_data
 surv_logantibody_data$logantibody <- 0
-surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(1+surv_logantibody_data$antibody)[which(surv_logantibody_data$antibody!=0)]
+surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(1+surv_logantibody_data$antibody*conv_factor)[which(surv_logantibody_data$antibody!=0)]
 
 cox_model_formula_logant <- Surv(start_time,end_time,event)~logantibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_logantibody_model <- try(coxph(cox_model_formula_logant,
@@ -180,8 +181,8 @@ jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_logantibody_direct.pn
 plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for log antibody model")
 abline(0,1,col=2)
 dev.off()
-AIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect)
-BIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect)
+write.csv(round(cbind(AIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect),BIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect))[,c(1,2,4)],1),
+          paste0(output_directory,"/IC_compare_COVID_jm.csv"))
 # Both prefer antibody with no direct effect over log(1+A) with or without direct effect, or antibody with direct effect.
 
 
