@@ -125,11 +125,45 @@ print("Created surv_antibody_data")
 # Set antibody levels to 0 for the control individuals
 surv_antibody_data$antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
 vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
-
 # Make the directory
 # if (!dir.exists(paste0(plot_directory,"/VE_plots/residuals2"))){dir.create(paste0(plot_directory,"/VE_plots/residuals2"))}
 
 #####
+# Splines - psplines gives basically the same results as A or log(1+A) model without splines 
+surv_antibody_data$BAU_antibody <- surv_antibody_data$antibody*conv_factor
+cox_model_spline_formula <- Surv(start_time,end_time,event)~pspline(BAU_antibody,df=3)+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_spline <- try(coxph(cox_model_spline_formula,
+                              data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
+surv_antibody_data$log1plus_antibody <- log(1+surv_antibody_data$antibody*conv_factor); surv_antibody_data$log1plus_antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
+cox_model_log1plus_spline_formula <- Surv(start_time,end_time,event)~pspline(log1plus_antibody,df=3)+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_log1plus_spline <- try(coxph(cox_model_log1plus_spline_formula,
+                              data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
+
+newdata <- surv_antibody_data[1:length(BAU_antibodies),]
+newdata$antibody <- BAU_antibodies/conv_factor
+pred_ant_nosp <- predict(cox_model, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl <- surv_antibody_data[1:length(BAU_antibodies),]
+newdata_contrl$antibody <- 0
+pred_contrl_nosp <- predict(cox_model, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+plot(100*(1-exp(pred_ant_nosp$fit)/exp(pred_contrl_nosp$fit))~BAU_antibodies,log="x",type="l")
+newdata$BAU_antibody <- BAU_antibodies
+pred_ant <- predict(cox_model_spline, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl$BAU_antibody <- 0
+pred_contrl <- predict(cox_model_spline, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="blue")
+##
+newdata$logantibody <- log(BAU_antibodies); newdata$As_vaccinated_arm_2 <- "ChAdOx1"
+pred_ant <- predict(cox_logantibody_model, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl$logantibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
+pred_contrl <- predict(cox_logantibody_model, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="green")
+##
+newdata$log1plus_antibody <- log(1+BAU_antibodies); newdata$As_vaccinated_arm_2 <- "ChAdOx1"
+pred_ant <- predict(cox_model_log1plus_spline, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl$log1plus_antibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
+pred_contrl <- predict(cox_model_log1plus_spline, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="green")
+
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
 # all of which may affect the risk of infection independently of vaccination (i.e. for both vaccinated and control individuals)
@@ -162,17 +196,29 @@ plot(cox_snell_ant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plo
 abline(0,1,col=2)
 dev.off()
 
-# Model using log(1 + antibodies)
+# Model using log(antibodies)
 surv_logantibody_data <- surv_antibody_data
 surv_logantibody_data$logantibody <- 0
-surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(1+surv_logantibody_data$antibody*conv_factor)[which(surv_logantibody_data$antibody!=0)]
+surv_logantibody_data$logantibody[which(surv_logantibody_data$antibody!=0)] <- log(surv_logantibody_data$antibody*conv_factor)[which(surv_logantibody_data$antibody!=0)]
 
 cox_model_formula_logant <- Surv(start_time,end_time,event)~logantibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_logantibody_model <- try(coxph(cox_model_formula_logant,
                                    data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
 cox_model_formula_logant_nodirect <- Surv(start_time,end_time,event)~logantibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_logantibody_model_nodirect <- try(coxph(cox_model_formula_logant_nodirect,
-                                   data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
+                                            data=surv_logantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_logantibody_data))))
+
+# Model using log(1 + antibodies)
+surv_log1plusantibody_data <- surv_antibody_data
+surv_log1plusantibody_data$log1plusantibody <- 0
+surv_log1plusantibody_data$log1plusantibody[which(surv_log1plusantibody_data$antibody!=0)] <- log(1+surv_log1plusantibody_data$antibody*conv_factor)[which(surv_log1plusantibody_data$antibody!=0)]
+
+cox_model_formula_log1plusant <- Surv(start_time,end_time,event)~log1plusantibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_log1plusantibody_model <- try(coxph(cox_model_formula_log1plusant,
+                                   data=surv_log1plusantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_log1plusantibody_data))))
+cox_model_formula_log1plusant_nodirect <- Surv(start_time,end_time,event)~log1plusantibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_log1plusantibody_model_nodirect <- try(coxph(cox_model_formula_log1plusant_nodirect,
+                                   data=surv_log1plusantibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_log1plusantibody_data))))
 
 # Cox-Snell residuals for log antibody model
 cox_snell_logant <- surv_antibody_data$event - resid(cox_logantibody_model)
@@ -181,7 +227,8 @@ jpeg(paste0(plot_directory,"/VE_plots/residuals2/Cox-Snell_logantibody_direct.pn
 plot(cox_snell_logant_NA, fun="cumhaz", mark.time=F, main = "Cox-Snell residual plot for log antibody model")
 abline(0,1,col=2)
 dev.off()
-write.csv(round(cbind(AIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect),BIC(cox_model_direct,cox_model,cox_logantibody_model,cox_logantibody_model_nodirect))[,c(1,2,4)],1),
+write.csv(round(cbind(AIC(cox_model_direct,cox_model,cox_log1plusantibody_model,cox_log1plusantibody_model_nodirect,cox_logantibody_model,cox_logantibody_model_nodirect),
+                      BIC(cox_model_direct,cox_model,cox_log1plusantibody_model,cox_log1plusantibody_model_nodirect,cox_logantibody_model,cox_logantibody_model_nodirect))[,c(1,2,4)],1),
           paste0(output_directory,"/IC_compare_COVID_jm.csv"))
 # Both prefer antibody with no direct effect over log(1+A) with or without direct effect, or antibody with direct effect.
 
