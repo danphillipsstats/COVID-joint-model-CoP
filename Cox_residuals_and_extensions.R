@@ -131,38 +131,60 @@ vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
 #####
 # Splines - psplines gives basically the same results as A or log(1+A) model without splines 
 surv_antibody_data$BAU_antibody <- surv_antibody_data$antibody*conv_factor
-cox_model_spline_formula <- Surv(start_time,end_time,event)~pspline(BAU_antibody,df=3)+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+
+
+cox_model_spline_formula <- Surv(start_time,end_time,event)~splines::bs(BAU_antibody,df=3,Boundary.knots = c(0,max(BAU_antibodies)))+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_model_spline <- try(coxph(cox_model_spline_formula,
                               data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 surv_antibody_data$log1plus_antibody <- log(1+surv_antibody_data$antibody*conv_factor); surv_antibody_data$log1plus_antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
-cox_model_log1plus_spline_formula <- Surv(start_time,end_time,event)~pspline(log1plus_antibody,df=3)+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_log1plus_spline_formula <- Surv(start_time,end_time,event)~splines::bs(log1plus_antibody,df=3,Boundary.knots = c(0,max(BAU_antibodies)))+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 cox_model_log1plus_spline <- try(coxph(cox_model_log1plus_spline_formula,
                               data=surv_antibody_data, id=sc_repeat_pid, weights = rep(1/m,nrow(surv_antibody_data))))
 
 newdata <- surv_antibody_data[1:length(BAU_antibodies),]
-newdata$antibody <- BAU_antibodies/conv_factor
+newdata$antibody <- BAU_antibodies/conv_factor; newdata$As_vaccinated_arm_2 <- "ChAdOx1"
 pred_ant_nosp <- predict(cox_model, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
 newdata_contrl <- surv_antibody_data[1:length(BAU_antibodies),]
-newdata_contrl$antibody <- 0
+newdata_contrl$antibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
 pred_contrl_nosp <- predict(cox_model, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-plot(100*(1-exp(pred_ant_nosp$fit)/exp(pred_contrl_nosp$fit))~BAU_antibodies,log="x",type="l")
-newdata$BAU_antibody <- BAU_antibodies
+
+png(paste0(plot_directory,"/VE_plots/functional_form/B_splines.png"),width = 1400,height=1000, pointsize=23)
+plot(100*(1-exp(pred_ant_nosp$fit)/exp(pred_contrl_nosp$fit))~BAU_antibodies,log="x",type="l",ylim=c(-50,100),lwd=3,
+     ylab="Vaccine efficacy",xaxt="n")
+log10_antibodies <- log10(BAU_antibodies)
+min_anti <- floor(min(log10_antibodies))
+max_anti <- ceiling(max(log10_antibodies))
+axis(1,at=10^seq(0,max_anti,1),lab=gsub(" ","",format(10^seq(0,max_anti,1),scientific=F),fixed=T))
+
+abline(h=0,lty=3,lwd=3)
+newdata$BAU_antibody <- BAU_antibodies; newdata$As_vaccinated_arm_2 <- "ChAdOx1"
+pred_ant <- predict(cox_model_direct, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl$BAU_antibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
+pred_contrl <- predict(cox_model_direct, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="darkgreen",lwd=3)
+
+abline(h=0,lty=3,lwd=3)
+newdata$BAU_antibody <- BAU_antibodies; newdata$As_vaccinated_arm_2 <- "ChAdOx1"
 pred_ant <- predict(cox_model_spline, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-newdata_contrl$BAU_antibody <- 0
+newdata_contrl$BAU_antibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
 pred_contrl <- predict(cox_model_spline, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="blue")
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="darkgreen",lty=2,lwd=3)
 ##
-newdata$logantibody <- log(BAU_antibodies); newdata$As_vaccinated_arm_2 <- "ChAdOx1"
-pred_ant <- predict(cox_logantibody_model, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-newdata_contrl$logantibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
-pred_contrl <- predict(cox_logantibody_model, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="green")
+newdata$log1plusantibody <- log(1+BAU_antibodies); newdata$As_vaccinated_arm_2 <- "ChAdOx1"
+pred_ant <- predict(cox_log1plusantibody_model, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+newdata_contrl$log1plusantibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
+pred_contrl <- predict(cox_log1plusantibody_model, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="purple",lwd=3)
 ##
 newdata$log1plus_antibody <- log(1+BAU_antibodies); newdata$As_vaccinated_arm_2 <- "ChAdOx1"
 pred_ant <- predict(cox_model_log1plus_spline, newdata=newdata, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
 newdata_contrl$log1plus_antibody <- 0; newdata_contrl$As_vaccinated_arm_2 <- "Control"
 pred_contrl <- predict(cox_model_log1plus_spline, newdata=newdata_contrl, type="lp", se.fit = TRUE)  # returns list with $fit and $se.fit
-lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="green")
+lines(100*(1-exp(pred_ant$fit-pred_contrl$fit))~BAU_antibodies,col="purple",lty=2,lwd=3)
+legend(100,50,legend=c("A","A+vacc","bs(A)+vacc","log(1+A)+vacc","bs(log(1+A))+vacc"),
+       col=c("black","darkgreen","darkgreen","purple","purple"),
+       lwd=3,lty=c(1,1,2,1,2))
+dev.off()
 
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
