@@ -95,7 +95,7 @@ time_colnames <- c("cor2dose_outcome_pos_primPositive","cor2dose_outcome_pos_pri
 data_long$X_l1[,time_colnames] <- sweep(data_long$X_l[,time_colnames],1,joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),"end_time"],"*")
 
 # Parse the stan model
-long_model = rstan::stan_model(file=paste0(directory_correlates_project,'/Longitudinal_hierarchical_model_normalised_ri_rs_exp_slope_t.stan'))
+long_model = rstan::stan_model(file=paste0(directory_correlates_project,'/Longitudinal_hierarchical_model_normalised_ri_fs_t.stan'))
 
 warmup_iterations = 5e4
 sampling_iterations = 15e3 + warmup_iterations #best to use 1e3 or higher
@@ -113,7 +113,7 @@ long_out = rstan::sampling(
   include = FALSE, # Exclude the following parameters from the model output
   pars = c("a_0_tf","a_1_tf","eta_0_tf","eta_1_tf","log_mu_tf"))
 
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
+file_name <- "ri_fs_7inc_pos_prim_t_all_covariates_t0PB28_resid"
 name <- paste0("Correlates_long_",file_name)
 
 # Summaries of stan model output
