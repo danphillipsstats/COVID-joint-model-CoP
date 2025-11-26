@@ -7,9 +7,16 @@ print(t1)
 
 #############################################################################
 # Define the directories in which files are saved - these may need adjusting for other users.
-directory_correlates <- getwd()
-directory_correlates_project <- paste0(directory_correlates,"/3_Programs")
-output_directory <- paste0(directory_correlates,"/4_Output")
+SLURM <- T
+if (SLURM){
+  directory_correlates <- getwd()
+  directory_correlates_project <- paste0(directory_correlates,"/3_Programs")
+  output_directory <- paste0(directory_correlates,"/4_Output")
+} else{
+  directory_correlates <- dirname(dirname(getwd()))
+  directory_correlates_project <- paste0(directory_correlates,"/3_Programs/COVID-joint-model-CoP")
+  output_directory <- paste0(directory_correlates,"/4_Output")
+}
 
 #load packages
 library(rstan)
@@ -82,6 +89,11 @@ data_long <- stan_long_model(long_data = long_correlates_S[which(long_correlates
                              ind_var = "sc_repeat_pid",
                              t_center = 7)
 print(paste0("mean(log_y) = ",mean(data_long$log_y)))
+data_long$X_l0 <- data_long$X_l; data_long$X_l1 <- data_long$X_l; data_long$p_l0 <- data_long$p_l; data_long$p_l1 <- data_long$p_l; 
+# # Define X_l1t to be X_l0t multiplied by the event time
+time_colnames <- c("cor2dose_outcome_pos_primPositive","cor2dose_outcome_pos_primPrimary","NelsonAalen")
+data_long$X_l1[,time_colnames] <- sweep(data_long$X_l[,time_colnames],1,joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),"end_time"],"*")
+
 # Parse the stan model
 long_model = rstan::stan_model(file=paste0(directory_correlates_project,'/Longitudinal_hierarchical_model_normalised_ri_rs_exp_slope_t.stan'))
 

@@ -7,29 +7,39 @@
 // t-distributed random error assumed, and Gaussian random effects. Weakly informative priors.
 data {
 	int <lower=0> 		n_l; 			// number of observations
-	int <lower=0> 		p_l;		 	// number of fixed effect parameters
+	int <lower=0> 		p_l0;		 	// number of fixed effect parameters - intercept
+	int <lower=0> 		p_l1;		 	// number of fixed effect parameters - slope
 	int <lower=0> 		n; 			// number of individuals
 	int<lower=1, upper=n> 	ll[n_l];		// Group indicators
-	matrix[n, p_l] 		X_l;	 		// Predictor matrix for fixed effects
+	matrix[n, p_l0] 		X_l0;	 		// Predictor matrix for fixed effects - intercept
+	matrix[n, p_l1] 		X_l1;	 		// Predictor matrix for fixed effects - slope
 	vector[n_l] 		log_y;			// Observed log antibodies vector
 	vector[n_l] 		t_l;			// times of observations
 	real                    t_center;               // Shift for t so t_center is the new time 0
 }
 
 transformed data{
-	matrix[n,p_l] X_l_tf;
-	vector[p_l] X_l_col_means;
-	vector[p_l] X_l_col_sd;
+	matrix[n,p_l0] X_l0_tf;
+	vector[p_l0] X_l0_col_means;
+	vector[p_l0] X_l0_col_sd;
+	matrix[n,p_l1] X_l1_tf;
+	vector[p_l1] X_l1_col_means;
+	vector[p_l1] X_l1_col_sd;
 	vector[n_l] log_y_tf;
 	real log_y_mean;
 	real log_y_sd;
 	real t_sd;
 	vector[n_l] t_l_tf;
 	
-	for (j in 1:p_l){
-		X_l_col_means[j] = mean(X_l[,j]);
-		X_l_col_sd[j] = sd(X_l[,j]);
-		X_l_tf[,j] = (X_l[,j] - X_l_col_means[j])/X_l_col_sd[j];
+	for (j in 1:p_l0){
+		X_l0_col_means[j] = mean(X_l0[,j]);
+		X_l0_col_sd[j] = sd(X_l0[,j]);
+		X_l0_tf[,j] = (X_l0[,j] - X_l0_col_means[j])/X_l0_col_sd[j];
+	}
+	for (j in 1:p_l1){
+		X_l1_col_means[j] = mean(X_l1[,j]);
+		X_l1_col_sd[j] = sd(X_l1[,j]);
+		X_l1_tf[,j] = (X_l1[,j] - X_l1_col_means[j])/X_l1_col_sd[j];
 	}
 	log_y_mean = mean(log_y);
 	log_y_sd = sd(log_y);
@@ -40,8 +50,8 @@ transformed data{
 }
 
 parameters {
-	vector[p_l] 		beta_l0_tf;			// covariate effects on intercept
-	vector[p_l] 		beta_l1_tf;			// covariate effects on slope
+	vector[p_l0] 		beta_l0_tf;			// covariate effects on intercept
+	vector[p_l1] 		beta_l1_tf;			// covariate effects on slope
 	real<lower=0> 		sigma_e_tf;		// error scale
 	real<lower=0> 		tau_0_tf;			// random intercept scale
 	real<lower=0> 		tau_1_tf;			// random slope scale
@@ -57,8 +67,8 @@ transformed parameters {
 	vector[n] 		a_1_tf;		// predicted longitudinal slope
 	vector[n_l] 		log_mu_tf;			// Mean for data point
 	
-	a_0_tf = X_l_tf*beta_l0_tf + alpha_0_tf + tau_0_tf*eta_0_tf;
-	a_1_tf = -exp(X_l_tf*beta_l1_tf + alpha_1_tf + tau_1_tf*(rho_tf*eta_0_tf + sqrt(1-rho_tf^2)*eta_1_tf)); // Using Cholesky decomposition
+	a_0_tf = X_l0_tf*beta_l0_tf + alpha_0_tf + tau_0_tf*eta_0_tf;
+	a_1_tf = -exp(X_l1_tf*beta_l1_tf + alpha_1_tf + tau_1_tf*(rho_tf*eta_0_tf + sqrt(1-rho_tf^2)*eta_1_tf)); // Using Cholesky decomposition
 	
 	log_mu_tf = a_0_tf[ll] + t_l_tf .* a_1_tf[ll];
 }
@@ -91,8 +101,8 @@ generated quantities {
 	// Fixed effect parameters
 	real 			alpha_0;		// Population intercept
 	real 			alpha_1;		// Population slope
-	vector[p_l] 		beta_l0;			// coefficients for fixed effects
-	vector[p_l] 		beta_l1;			// coefficients for fixed effects
+	vector[p_l0] 		beta_l0;			// coefficients for fixed effects
+	vector[p_l1] 		beta_l1;			// coefficients for fixed effects
 	real<lower=0> 		sigma_e;		// error scale
 	real<lower=0> 		tau_0;			// covariate effects on intercept
 	real<lower=0> 		tau_1;			// covariate effects on slope
@@ -103,10 +113,10 @@ generated quantities {
 	a_0 = log_y_sd * a_0_tf + log_y_mean; 
 	a_1 = a_1_tf * log_y_sd / t_sd;
 	// Fixed effect parameters
-	alpha_0 = log_y_sd * (alpha_0_tf - dot_product(beta_l0_tf, X_l_col_means ./ X_l_col_sd)) + log_y_mean; // the intercept at time t_center
-	alpha_1 = alpha_1_tf + log(log_y_sd/t_sd) - dot_product(beta_l1_tf, X_l_col_means ./ X_l_col_sd);
-	beta_l0 = log_y_sd * beta_l0_tf ./ X_l_col_sd; // the covariate effect on value at time t_center
-	beta_l1 = beta_l1_tf ./ X_l_col_sd;
+	alpha_0 = log_y_sd * (alpha_0_tf - dot_product(beta_l0_tf, X_l0_col_means ./ X_l0_col_sd)) + log_y_mean; // the intercept at time t_center
+	alpha_1 = alpha_1_tf + log(log_y_sd/t_sd) - dot_product(beta_l1_tf, X_l1_col_means ./ X_l1_col_sd);
+	beta_l0 = log_y_sd * beta_l0_tf ./ X_l0_col_sd; // the covariate effect on value at time t_center
+	beta_l1 = beta_l1_tf ./ X_l1_col_sd;
 	tau_0 = log_y_sd * tau_0_tf;
 	tau_1 = tau_1_tf;
 	rho = rho_tf;
