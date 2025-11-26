@@ -112,3 +112,4 @@ generated quantities {
 	tau_0 = log_y_sd * tau_0_tf;
 	sigma_e = log_y_sd * sigma_e_tf;
 	resid = (log_y_tf-log_mu_tf)/sigma_e_tf;
+}
