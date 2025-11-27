@@ -16,9 +16,9 @@ event_outcome <- c("pos","prim")[2] # To be run with both infection outcomes sep
 antibody_type <- c("S","neuts")[1]
 long_type <- c("7_day_incubator","0_day_incubator")[1]
 # The name of the longitudinal model
-long_file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
+long_file_name <- "ri_fs_7inc_pos_prim_t_all_covariates_t0PB28_resid"
 # The name for this file
-model_name <- "_submission"
+model_name <- "_thesis1"
 if(!(substring(long_file_name,1,5)=="neuts") == (antibody_type=="neuts")){warning("Your long_file_name and antibody_type do not match. You may be running a neuts analysis on S data or vice versa. Please double check.")}
 
 # Define the directories in which files are saved - these may need adjusting for other users.
@@ -44,7 +44,7 @@ library(parallel)
 source(paste0(directory_correlates_project,"/functions.R"))
 ################################################################################
 # Two-stage model, second stage
-cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc")
+cox_model_name <- paste0(event_outcome,"_logantibody_site_parallel_simple_7inc")
 cox_model_namelong <- paste0("_",cox_model_name)
 cox_stage_two <- readRDS(paste0(output_directory,"/Cox_infection_model_long_",long_file_name,cox_model_namelong,".RDS"))
 
@@ -166,14 +166,14 @@ dimnames(a_1_array)$parameters <- joint_correlates_ChAd$sc_repeat_pid
 # Create histogram of observed antibody values and predicted antibody values at end of study day 209
 antibody_breaks <- seq(-5,6,by=0.2)
 obs_antibodies <- long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),]$antibody*conv_factor
-pred_antibody_values_28 <- exp(a_0_array+(28-t0)*a_1_array)*conv_factor
+pred_antibody_values_28 <- a_0_array+(28-t0)*a_1_array+log(conv_factor)
 pred_antibody_values_28_hist <- hist(log10(pred_antibody_values_28), plot=F, breaks = antibody_breaks)
 # Calculate proportion of predicted antibodies less than 10, 100, 1000 BAU/mL
 round(mean(pred_antibody_values_28<10)*100,1)
 round(mean(pred_antibody_values_28<100)*100,1)
 round(mean(pred_antibody_values_28<1000)*100,1)
 rm(pred_antibody_values_28)
-pred_antibody_values_182 <- exp(a_0_array+(182-t0)*a_1_array)*conv_factor
+pred_antibody_values_182 <- a_0_array+(182-t0)*a_1_array+log(conv_factor)
 pred_antibody_values_182_hist <- hist(log10(pred_antibody_values_182), plot=F,breaks=antibody_breaks)
 # Calculate proportion of predicted antibodies less than 10, 100, 1000 BAU/mL
 round(mean(pred_antibody_values_182<10)*100,1)
@@ -553,7 +553,7 @@ sfLapply_VE_vs_time_analysis <- function(chain, my_seed = 1234){
 
 VE_vs_time_analysis <- function(parameter_draw_list){
   attach(parameter_draw_list)
-  antibody_mat <- exp(a_0_vec+outer(a_1_vec,ds_t0))
+  antibody_mat <- a_0_vec+outer(a_1_vec,ds_t0)
   # Antibody quantiles
   antibody_quantiles <- t(apply(antibody_mat,2,quantile,effect_vs_time_quants)*conv_factor)
   
@@ -607,16 +607,14 @@ VE_vs_time_analysis <- function(parameter_draw_list){
   new_rows_tf$NelsonAalen <- (NA_draw-mean(data_long$X_l[,"NelsonAalen"]))/sd(data_long$X_l[,"NelsonAalen"])
   
   # Simulate the random intercepts and slopes with uncertainty
-  stdnorms <- array(rnorm(2*n_new_ind*n_error_samples),dim=c(n_error_samples,n_new_ind,2))
   # Sample values of each parameter from N(MLE,Var(MLE))
-  eta_0_tf_sim <- stdnorms[,,1]
-  eta_1_tf_sim <- stdnorms[,,1]*long_out["rho_tf"] + stdnorms[,,2]*sqrt(1-(long_out["rho_tf"])^2)
+  eta_0_tf_sim <- array(rnorm(n_new_ind*n_error_samples),dim=c(n_error_samples,n_new_ind))
+  # eta_1_tau_sim <- array(0,dim=c(n_error_samples,n_new_ind))
   rm(stdnorms)
   # a_0 = x*beta_0+alpha_0 + eta_0*tau_0
   a_0_tf_sim <- sweep(eta_0_tf_sim*long_out["tau_0_tf"],2,long_out[beta_l0s_tf_cols]%*%t(new_rows_tf) + long_out["alpha_0_tf"],FUN="+")
-  a_0_tf_sim
   # a_1 = x*beta_1+alpha_1 + eta_1*tau_1
-  a_1_tf_sim <- -exp(sweep(eta_1_tf_sim*long_out["tau_1_tf"],2,long_out[beta_l1s_tf_cols]%*%t(new_rows_tf) + long_out["alpha_1_tf"],FUN="+"))
+  a_1_tf_sim <- long_out[beta_l1s_tf_cols]%*%t(new_rows_tf) + long_out["alpha_1_tf"] # This may cause an error - CHECK!
   rm(eta_1_tf_sim,eta_0_tf_sim)
   a_0_sim <- a_0_tf_sim*sd(data_long$log_y)+mean(data_long$log_y)
   a_1_sim <- a_1_tf_sim*sd(data_long$log_y)/sd(data_long$t_l)
