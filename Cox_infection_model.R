@@ -97,7 +97,7 @@ event_times <- c(0,unique(event_times[order(event_times)]))
 a_0_sample <- a_0_array[1,1,]
 a_1_sample <- a_1_array[1,1,]
 # Prepare wide antibody data
-antibody_data <- exp(a_0_sample%*%t(rep(1,length(event_times))) + a_1_sample%*%t(event_times))
+antibody_data <- a_0_sample%*%t(rep(1,length(event_times))) + a_1_sample%*%t(event_times) # Note antibody here means log(antibody)!!
 colnames(antibody_data) <- event_times
 antibody_data <- as.data.frame(antibody_data)
 surv_time_id_columns <- c("sc_repeat_pid","start_time","end_time")
@@ -144,7 +144,7 @@ surv_antibody_data$antibody[vacc_group_ind] <- exp(a_0_sample_times + surv_antib
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
 # all of which may affect the risk of infection independently of vaccination (i.e. for both vaccinated and control individuals)
-cox_model_formula <- Surv(start_time,end_time,event)~antibody+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 #####
 # Create a model.matrix for use in later Output analysis
 joint_correlates_mat <- joint_correlates
@@ -214,7 +214,7 @@ output <- list("cox_model_pred" = aperm(cox_model_pred_var[,names(cox_model$coef
                "cox_model_var" = aperm(cox_model_pred_var[,variance_names,],c(1,3,2)),
                "cox_model_mat" = cox_model_mat)
 
-cox_model_name <- paste0(event_outcome,"_site_parallel_simple_7inc_nodirect")
+cox_model_name <- paste0(event_outcome,"_logantibody_site_parallel_simple_7inc")
 saveRDS(output,paste0(output_directory,"/Cox_infection_model_long_",file_name,"_",cox_model_name,".RDS"))
 pryr::mem_used()
 t_final <- Sys.time()
