@@ -10,9 +10,16 @@ print(t_init)
 # Cox infection model
 ##############################################################################
 # Define the directories in which files are saved - these may need adjusting for other users.
-directory_correlates <- getwd() 
-directory_correlates_project <- paste0(directory_correlates,"/3_Programs")
-output_directory <- paste0(directory_correlates,"/4_Output")
+SLURM <- T
+if (SLURM){
+  directory_correlates <- getwd()
+  directory_correlates_project <- paste0(directory_correlates,"/3_Programs")
+  output_directory <- paste0(directory_correlates,"/4_Output")
+} else{
+  directory_correlates <- dirname(dirname(getwd()))
+  directory_correlates_project <- paste0(directory_correlates,"/3_Programs/COVID-joint-model-CoP")
+  source(paste0(directory_correlates,"/3_Programs/Output_directory.R"))
+}
 
 #load packages
 library(rstan)
@@ -32,7 +39,7 @@ event_outcome <- c("pos","prim")[2] # To be run with both infection outcomes sep
 # Get the intercepts and slopes
 set.seed(1)
 # Name of file from Longitudinal_antibody_model.R
-file_name <- "ri_rs_7inc_pos_prim_exp_slope_t_all_covariates_t0PB28_resid"
+file_name <- "ri_fs_7inc_pos_prim_t_all_covariates_t0PB28_resid"
 # Read the output from Longitudinal_antibody_model.R
 long_out_rs <- readRDS(paste0(output_directory,"/Correlates_long_",file_name,"_reffects.RDS"))
 # The list of objects put into the stan model
