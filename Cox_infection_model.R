@@ -1,6 +1,6 @@
 # This file runs a Cox model based on the output from the Longitudinal_antibody_model.R file
 # The second stage in the two-stage joint model.
-# Models the time until testing positive for COVID-19, based on multiply imputed predicted antibody levels.
+# Models the time until testing positive for COVID-19, based on multiply imputed predicted log_antibody levels.
 
 t_init <- Sys.time()
 print(t_init)
@@ -52,7 +52,7 @@ a_0_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)
 a_1_array <- long_out_rs[,,which(substring(dimnames(long_out_rs)$parameters,1,4)=="a_1[")]
 rm(long_out_rs)
 # Undo the time shift by t_center + 7 (so that t0 is now PB14, 7 days before t0 PB21 in the survival data)
-# This means the hazard at time t will relate to the antibody level 7 days prior.
+# This means the hazard at time t will relate to the log_antibody level 7 days prior.
 a_0_array <- a_0_array - (data_long$t_center + 7) * a_1_array
 n <- dim(a_0_array)[3]
 nsamples <- dim(a_0_array)[1]
@@ -84,7 +84,7 @@ if (event_outcome == "prim"){
   times$event <- as.numeric(times$cor2dose_positive_ind==1)
 }
 times2 <- tmerge(times,times,id=sc_repeat_pid,endpt=event(end_time,event),tstart = start_time, tstop = end_time)
-# Create antibody data
+# Create log_antibody data
 if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infection
   event_times <- times$end_time[which(times$cor2dose_primary_ind==1)]
 } else if (event_outcome == "pos"){ # if event is any COVID-19 infection
@@ -96,22 +96,22 @@ event_times <- c(0,unique(event_times[order(event_times)]))
 # Create sample dataset
 a_0_sample <- a_0_array[1,1,]
 a_1_sample <- a_1_array[1,1,]
-# Prepare wide antibody data
-antibody_data <- a_0_sample%*%t(rep(1,length(event_times))) + a_1_sample%*%t(event_times) # Note antibody here means log(antibody)!!
+# Prepare wide log_antibody data
+antibody_data <- a_0_sample%*%t(rep(1,length(event_times))) + a_1_sample%*%t(event_times)
 colnames(antibody_data) <- event_times
 antibody_data <- as.data.frame(antibody_data)
 surv_time_id_columns <- c("sc_repeat_pid","start_time","end_time")
 antibody_data[,surv_time_id_columns] <- joint_correlates[which(joint_correlates$As_vaccinated_arm_2=="ChAdOx1"),surv_time_id_columns]
 # Change end_time to be calendar time of ending the at-risk period, instead of time since the start of the at-risk period
 antibody_data$end_time <- antibody_data$end_time + antibody_data$start_time
-# Transform antibody data from wide to long
+# Transform log_antibody data from wide to long
 last_time <- as.character(event_times[length(event_times)])
-long_antibody_data <- gather(antibody_data,key=time,value=antibody,"0":last_time,factor_key=F)
+long_antibody_data <- gather(antibody_data,key=time,value=log_antibody,"0":last_time,factor_key=F)
 long_antibody_data$time <- as.numeric(long_antibody_data$time)
 long_antibody_data <- long_antibody_data[order(long_antibody_data$sc_repeat_pid),]
-# Merge time-varying antibody data with survival dataset
-surv_antibody_data <- tmerge(times2,long_antibody_data,id=sc_repeat_pid,antibody=tdc(time,antibody))
-surv_antibody_data <- surv_antibody_data[,c(surv_fix_columns,"tstart","tstop","endpt","antibody")]
+# Merge time-varying log_antibody data with survival dataset
+surv_antibody_data <- tmerge(times2,long_antibody_data,id=sc_repeat_pid,log_antibody=tdc(time,log_antibody))
+surv_antibody_data <- surv_antibody_data[,c(surv_fix_columns,"tstart","tstop","endpt","log_antibody")]
 names(surv_antibody_data)[names(surv_antibody_data)=="tstart"] <- "start_time"
 names(surv_antibody_data)[names(surv_antibody_data)=="tstop"] <- "end_time"
 names(surv_antibody_data)[names(surv_antibody_data)=="endpt"] <- "event"
@@ -133,18 +133,18 @@ rm(a_0_array,a_1_array)
 
 print("Created a_01_mat_list")
 
-# Set antibody levels to 0 for the control individuals
-surv_antibody_data$antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
+# Set log_antibody levels to 0 for the control individuals
+surv_antibody_data$log_antibody[which(surv_antibody_data$As_vaccinated_arm_2=="Control")] <- 0
 vacc_group_ind <- which(surv_antibody_data$As_vaccinated_arm_2=="ChAdOx1")
 
 # Create initial templates of outputs to fill in during the loop
 a_0_sample_times <- a_01_mat_list[[1]][[1]][1,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])]
 a_1_sample_times <- a_01_mat_list[[1]][[1]][2,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])]
-surv_antibody_data$antibody[vacc_group_ind] <- exp(a_0_sample_times + surv_antibody_data$end_time[vacc_group_ind]*a_1_sample_times)
+surv_antibody_data$log_antibody[vacc_group_ind] <- a_0_sample_times + surv_antibody_data$end_time[vacc_group_ind]*a_1_sample_times
 # Includes an effect due to antibodies, as well as a direct effect due to vaccination (As_vaccinated_arm_2).
 # Includes covariates age, sex, ethnicity, comorbidity, BMI, healthcare worker
 # all of which may affect the risk of infection independently of vaccination (i.e. for both vaccinated and control individuals)
-cox_model_formula <- Surv(start_time,end_time,event)~antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
+cox_model_formula <- Surv(start_time,end_time,event)~log_antibody+As_vaccinated_arm_2+age_group+sc_gender+cor2dose_non_white+cor2dose_comorbidities+cor2dose_bmi_geq_30+cor2dose_hcw_status+strata(site)
 #####
 # Create a model.matrix for use in later Output analysis
 joint_correlates_mat <- joint_correlates
@@ -153,8 +153,8 @@ if (event_outcome == "prim"){ # if event is primary symptomatic COVID-19 infecti
 } else if (event_outcome == "pos"){ # if event is any COVID-19 infection
   joint_correlates_mat$event <- joint_correlates_mat$cor2dose_positive_ind
 }
-joint_correlates_mat$antibody <- 0
-joint_correlates_mat$antibody[which(joint_correlates_mat$As_vaccinated_arm_2=="ChAdOx1")] <- 1 # Just set to one for ease of understanding interaction terms
+joint_correlates_mat$log_antibody <- 0
+joint_correlates_mat$log_antibody[which(joint_correlates_mat$As_vaccinated_arm_2=="ChAdOx1")] <- 1 # Just set to one for ease of understanding interaction terms
 joint_correlates_mat$end_time <- joint_correlates_mat$start_time + joint_correlates_mat$end_time # As end_time should be end time not length of time at risk
 cox_model_mat <- model.matrix(cox_model_formula,data=joint_correlates_mat)
 # Run a cox model, to create placeholders
@@ -174,12 +174,12 @@ paste0(as.numeric(substring(obj_size,first=1,last=gregexpr(pattern="G",obj_size)
 
 t3 <- Sys.time()
 print("Starting apply...")
-# Function runs the Cox model using antibody data from matrix a_01_mat
+# Function runs the Cox model using log_antibody data from matrix a_01_mat
 # Where row 1 of a_01_mat is a_0 (intercept) and row 2 is a_1 (gradient)
 # Columns are all individuals.
 # Returns a vector containing first the MLEs and then the asymptotic covariance matrix of Cox parameters
 cox_VE_antibody <- function(a_01_mat){
-  surv_antibody_data$antibody[vacc_group_ind] <- exp(a_01_mat[1,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])] + surv_antibody_data$start_time[vacc_group_ind]*a_01_mat[2,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])])
+  surv_antibody_data$log_antibody[vacc_group_ind] <- a_01_mat[1,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])] + surv_antibody_data$start_time[vacc_group_ind]*a_01_mat[2,as.character(surv_antibody_data$sc_repeat_pid[vacc_group_ind])]
   cox_model <- try(coxph(cox_model_formula,
                        data=surv_antibody_data, id=sc_repeat_pid))
   return(try(c(cox_model$coefficients,cox_model$var)))
@@ -198,7 +198,7 @@ sfSapply_a_01_mat_list <- function(chain, my_seed = 1234){
   
   print(paste("Number of workers:",nwork))
   # Runs the function on each element of the list in parallel
-  # That is, runs a cox model for each imputation of antibody levels.
+  # That is, runs a cox model for each imputation of log_antibody levels.
   cox_model_pred_var <- t(snowfall::sfSapply(x = a_01_mat_sub_list, fun = cox_VE_antibody))
   snowfall::sfStop()
   return(cox_model_pred_var)
