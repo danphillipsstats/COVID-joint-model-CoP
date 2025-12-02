@@ -76,9 +76,9 @@ set.seed(1234)
 Z0_norm <- matrix(rnorm(n=nsamples*nchains),nrow=nsamples,ncol=nchains) # Standard normal random variables
 Z1_norm <- matrix(rnorm(n=nsamples*nchains),nrow=nsamples,ncol=nchains)
 # Calculate the correlation
-cor_gamma_zeta <- cox_stage_two$cox_model_var[,,"antibody.As_vaccinated_arm_2ChAdOx1"]/sqrt(cox_stage_two$cox_model_var[,,"antibody.antibody"]*cox_stage_two$cox_model_var[,,"As_vaccinated_arm_2ChAdOx1.As_vaccinated_arm_2ChAdOx1"])
+cor_gamma_zeta <- cox_stage_two$cox_model_var[,,"log_antibody.As_vaccinated_arm_2ChAdOx1"]/sqrt(cox_stage_two$cox_model_var[,,"log_antibody.log_antibody"]*cox_stage_two$cox_model_var[,,"As_vaccinated_arm_2ChAdOx1.As_vaccinated_arm_2ChAdOx1"])
 # Transform the standard normal random variables to normal random variables with correct mean, and covariances
-gammas <- cox_stage_two$cox_model_pred[,,"antibody"] + Z0_norm*sqrt(cox_stage_two$cox_model_var[,,"antibody.antibody"])
+gammas <- cox_stage_two$cox_model_pred[,,"log_antibody"] + Z0_norm*sqrt(cox_stage_two$cox_model_var[,,"log_antibody.log_antibody"])
 zetas <- cox_stage_two$cox_model_pred[,,"As_vaccinated_arm_2ChAdOx1"] + (Z0_norm*cor_gamma_zeta + Z1_norm*sqrt(1-cor_gamma_zeta^2))*sqrt(cox_stage_two$cox_model_var[,,"As_vaccinated_arm_2ChAdOx1.As_vaccinated_arm_2ChAdOx1"])
 
 ###############
@@ -166,14 +166,14 @@ dimnames(a_1_array)$parameters <- joint_correlates_ChAd$sc_repeat_pid
 # Create histogram of observed antibody values and predicted antibody values at end of study day 209
 antibody_breaks <- seq(-5,6,by=0.2)
 obs_antibodies <- long_correlates[which(long_correlates$As_vaccinated_arm_2=="ChAdOx1"),]$antibody*conv_factor
-pred_antibody_values_28 <- a_0_array+(28-t0)*a_1_array+log(conv_factor)
+pred_antibody_values_28 <- exp(a_0_array+(28-t0)*a_1_array+log(conv_factor))
 pred_antibody_values_28_hist <- hist(log10(pred_antibody_values_28), plot=F, breaks = antibody_breaks)
 # Calculate proportion of predicted antibodies less than 10, 100, 1000 BAU/mL
 round(mean(pred_antibody_values_28<10)*100,1)
 round(mean(pred_antibody_values_28<100)*100,1)
 round(mean(pred_antibody_values_28<1000)*100,1)
 rm(pred_antibody_values_28)
-pred_antibody_values_182 <- a_0_array+(182-t0)*a_1_array+log(conv_factor)
+pred_antibody_values_182 <- exp(a_0_array+(182-t0)*a_1_array)*conv_factor
 pred_antibody_values_182_hist <- hist(log10(pred_antibody_values_182), plot=F,breaks=antibody_breaks)
 # Calculate proportion of predicted antibodies less than 10, 100, 1000 BAU/mL
 round(mean(pred_antibody_values_182<10)*100,1)
@@ -257,7 +257,7 @@ nwork <- length(parallelly::availableWorkers())
 # Calculate VE against antibody
 VE_summary_chains <- array(dim=c(nchains,nant_val,4))
 for (chain in seq_len(nchains)){ # Calculate VE from that chain
-  VE_samples <- 100*(1 - exp(outer(gammas[,chain],antibody_values) + zetas[,chain])) # Given as a percentage
+  VE_samples <- 100*(1 - exp(outer(gammas[,chain],log_antibody_values) + zetas[,chain])) # Given as a percentage
   VE_summary_chains[chain,,] <- cbind(colMeans(VE_samples),t(apply(VE_samples,2,quantile,c(0.5,0.025,0.975))))
   rm(VE_samples)
 }
@@ -266,7 +266,7 @@ dimnames(VE_summary_chains)[[3]] <- c("mean","median","lower95CI","upper95CI")
 # Plot the summary for the four chains on the same graph to check they look the same.
 
 # Overall summary
-VE_samples <- 100*(1 - exp(outer(c(gammas),antibody_values) + c(zetas))) # Given as a percentage
+VE_samples <- 100*(1 - exp(outer(c(gammas),log_antibody_values) + c(zetas))) # Given as a percentage
 VE_summary <- cbind(colMeans(VE_samples),t(apply(VE_samples,2,quantile,c(0.5,0.025,0.975))))
 rm(VE_samples)
 rownames(VE_summary) <- BAU_antibodies
@@ -285,7 +285,7 @@ dimnames(antibody_at_VE_summary_chains)[[1]] <- paste0("chain::",1:4)
 dimnames(antibody_at_VE_summary_chains)[[2]] <- VE
 dimnames(antibody_at_VE_summary_chains)[[3]] <- quants
 for (chain in seq_len(nchains)){ # Calculate the antibody level required for a certain VE
-  antibody_at_VE_samples <- sweep(-outer(zetas[,chain],log(1-VE),FUN="-"),1,gammas[,chain],"/")
+  antibody_at_VE_samples <- exp(sweep(-outer(zetas[,chain],log(1-VE),FUN="-"),1,gammas[,chain],"/"))
   colnames(antibody_at_VE_samples) <- VE
   antibody_at_VE_summary_chains[chain,,] <- t(apply(antibody_at_VE_samples,2,quantile,quants))
   rm(antibody_at_VE_samples)
@@ -295,7 +295,7 @@ antibody_at_VE_summary_chains <- antibody_at_VE_summary_chains*conv_factor
 signif(antibody_at_VE_summary_chains[,as.character(c(0.5,0.7,0.9)),],3)
 
 # Overall
-antibody_at_VE_samples <- sweep(-outer(c(zetas),log(1-VE),FUN="-"),1,c(gammas),"/")
+antibody_at_VE_samples <- exp(sweep(-outer(c(zetas),log(1-VE),FUN="-"),1,c(gammas),"/"))
 colnames(antibody_at_VE_samples) <- VE
 antibody_at_VE_summary <- t(apply(antibody_at_VE_samples,2,quantile,quants))
 rm(antibody_at_VE_samples)
@@ -316,7 +316,7 @@ names(direct_effect_CI) <- c("mean","median","lower95CI","upper95CI")
 rm(direct_effects)
 
 # Antibody indirect effect
-VE_indirect_samples <- 100*(1 - exp(outer(gammas,antibody_values)))
+VE_indirect_samples <- 100*(1 - exp(outer(gammas,log_antibody_values)))
 library(abind)
 VE_indirect_summary_chains <- abind(apply(VE_indirect_samples,c(2,3),mean),aperm(apply(VE_indirect_samples,c(2,3),quantile,c(0.5,0.025,0.975)),c(2,3,1)), along=3)
 rm(VE_indirect_samples)
@@ -324,7 +324,7 @@ dimnames(VE_indirect_summary_chains)[[2]] <- BAU_antibodies
 dimnames(VE_indirect_summary_chains)[[3]] <- c("mean","median","lower95CI","upper95CI")
 
 # Overall
-VE_indirect_samples <- 100*(1 - exp(outer(c(gammas),antibody_values)))
+VE_indirect_samples <- 100*(1 - exp(outer(c(gammas),log_antibody_values)))
 VE_indirect_summary <- cbind(apply(VE_indirect_samples,2,mean),t(apply(VE_indirect_samples,2,quantile,c(0.5,0.025,0.975))))
 rm(VE_indirect_samples)
 rownames(VE_indirect_summary) <- BAU_antibodies
@@ -367,12 +367,12 @@ if(antibody_name=="S IgG"){
 } else if(antibody_name=="nAb"){antibody_multiplier_WHO <- 10}
 
 antibody_multiplier <- antibody_multiplier_WHO/conv_factor
-effect_summary["antibody",] <- effect_summary["antibody",]*antibody_multiplier
+effect_summary["log_antibody",] <- effect_summary["log_antibody",] + log(antibody_multiplier)
 effect_summary <- cbind(effect_summary,exp(effect_summary))
 colnames(effect_summary) <- paste0(rep(c("log",""),each=4),rep(c("mean","median","lower95CI","upper95CI"),2))
 effect_summary <- round(as.data.frame(effect_summary),5)
 # Give a list of all possible rownames from all models which have been considered at some point
-{rownames_full <- c(paste0("Antibody level\n (Effect due to increase of ",antibody_multiplier_WHO," ",antibody_units,")"),
+{rownames_full <- c(paste0("Log antibody level\n (Effect due to fold increase of ",antibody_multiplier_WHO," ",antibody_units,")"),
                     paste0("Square root of antibody level\n (Effect due to increase of sqrt(",(antibody_multiplier_WHO),") sqrt(BAU/mL))"),
                     "Vaccination direct effect\n (ChAdOx1 nCoV-19 vs control)",
                     "Dose schedule\n (Two low doses vs two standard doses)",
@@ -396,7 +396,7 @@ effect_summary <- round(as.data.frame(effect_summary),5)
                     "Vaccination interval interaction\n (Additional effect due to ChAdOx1 vaccination for those 9-11 weeks)",
                     "Vaccination interval interaction\n (Additional effect due to ChAdOx1 vaccination for those 6-8 weeks)",
                     "Vaccination interval interaction\n (Additional effect due to ChAdOx1 vaccination for those <6 weeks)")
-  rowlabels_full <- c("antibody","sqrt(antibody)","As_vaccinated_arm_2ChAdOx1",
+  rowlabels_full <- c("log_antibody","sqrt(antibody)","As_vaccinated_arm_2ChAdOx1",
                       "cor2dose_scheduleLDLD","cor2dose_scheduleLDSD",
                       "age_group56-69", "age_group>=70", 
                       "sc_genderFemale", "cor2dose_non_whiteOther",
@@ -526,7 +526,7 @@ sfLapply_VE_vs_time_analysis <- function(chain, my_seed = 1234){
   cluster <- snowfall::sfInit(nwork,type="SOCK", parallel=T)   
   # Load the relevant objects in the parallel workspaces - including 
   snowfall::sfExport("loess_estimate","loess_lower_estimate","loess_upper_estimate",
-                     "antibody_values","ds_t0","atsb","effect_vs_time_quants","conv_factor","nts",
+                     "antibody_values","log_antibody_values","ds_t0","atsb","effect_vs_time_quants","conv_factor","nts",
                      "VEtsb",
                      "new_data","new_rows_tf","n_new_ind","new_data_names",
                      "mmlinm","mmlogm",
@@ -555,7 +555,7 @@ VE_vs_time_analysis <- function(parameter_draw_list){
   attach(parameter_draw_list)
   antibody_mat <- a_0_vec+outer(a_1_vec,ds_t0)
   # Antibody quantiles
-  antibody_quantiles <- t(apply(antibody_mat,2,quantile,effect_vs_time_quants)*conv_factor)
+  antibody_quantiles <- t(apply(antibody_mat,2,quantile,effect_vs_time_quants) + log(conv_factor))
   
   ################
   # Mean VE vs time
@@ -565,7 +565,7 @@ VE_vs_time_analysis <- function(parameter_draw_list){
   
   ############
   # Extrapolation to Omicron
-  antibody_BAU_mat <- antibody_mat*conv_factor
+  antibody_BAU_mat <- antibody_mat + log(conv_factor)
   # Truncate values greater than the largest value of antibodies from the Wei study
   antibody_BAU_mat <- pmin(antibody_BAU_mat,max(loess_estimate$x))
   
