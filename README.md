@@ -1,6 +1,6 @@
 # Joint modelling of COVID-19 antibody decay and risk of infection
 The branch medRxiv-submission-1 gives code accompanying the preprint "Improved estimates of COVID-19 correlates of protection, antibody decay and vaccine efficacy waning: a joint modelling approach". https://www.medrxiv.org/content/10.1101/2024.07.02.24309776v1 \
-We run a two-stage joint model for post-vaccination COVID-19 antibody decay and the risk of subsequent COVID-19 infection. We fit the model to data from the COV002 trial of the ChAdOx1 nCoV-19 vaccine. The two-stage model approximates a Bayesian joint model and accounts for uncertainty in the latent antibody trajectories by multiple imputation.\
+We run a two-stage joint model for post-vaccination COVID-19 antibody decay and the risk of subsequent COVID-19 infection. We fit the model to data from the COV002 trial of the ChAdOx1 nCoV-19 vaccine. The two-stage model approximates a Bayesian joint model and accounts for uncertainty in the latent antibody trajectories by multiple imputation. This repository only contains the code for the analysis, it does *not* contain the data, nor any dummy/simulated data.\
 The branch main is for updates since the release of the preprint.
 ## Project files
 ### Main files
